@@ -59,6 +59,37 @@ func (srm *SysrootManager) DeleteSysRoot(name string, arch string) error {
 	return NewSysRoot(srm.sysroots).SetName(name).SetArch(arch).Delete()
 }
 
+// SetDefaultSysRoot to be locked on the particular package manager.
+// This option only sets configured default sysroot, but it still can be overridden.
+func (srm *SysrootManager) SetDefaultSysRoot(name string, arch string) error {
+	if err := srm.checkArch(arch); err != nil {
+		return err
+	}
+
+	roots, err := srm.GetSysRoots()
+	if err != nil {
+		return err
+	}
+
+	var dsr *SysRoot
+	for _, sr := range roots {
+		if sr.Name == name && sr.Arch == arch {
+			dsr = sr
+		}
+	}
+	if dsr != nil {
+		for _, sr := range roots {
+			if err := sr.SetDefault(sr.Name == dsr.Name && sr.Arch == dsr.Arch); err != nil {
+				return err
+			}
+		}
+	} else {
+		return fmt.Errorf("Sysroot you want to make default was not found")
+	}
+
+	return nil
+}
+
 // GetSysRoots returns all available sysroots
 func (srm *SysrootManager) GetSysRoots() ([]*SysRoot, error) {
 	data, err := ioutil.ReadDir(srm.sysroots)

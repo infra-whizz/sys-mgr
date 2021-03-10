@@ -10,6 +10,7 @@ import (
 	sysmgr "github.com/infra-whizz/sys-mgr"
 	wzlib_logger "github.com/infra-whizz/wzlib/logger"
 	"github.com/isbm/go-nanoconf"
+	"github.com/thoas/go-funk"
 	"github.com/urfave/cli/v2"
 )
 
@@ -28,6 +29,13 @@ func init() {
 	if appname != fmt.Sprintf("%s-sysroot", pkgman) {
 		os.Stderr.WriteString(fmt.Sprintf("This app should be called '%s-sysroot'.\n", pkgman))
 		os.Exit(1)
+	}
+
+	if !funk.Contains(os.Args, "-h") && !funk.Contains(os.Args, "--help") {
+		if err := sysmgr.CheckUser(0, 0); err != nil {
+			os.Stderr.WriteString("Root privileges are required to run this command.\n")
+			os.Exit(1)
+		}
 	}
 }
 
@@ -62,17 +70,26 @@ func runSystemManager(ctx *cli.Context) error {
 		if len(roots) > 0 {
 			fmt.Printf("Found %d system roots:\n", len(roots))
 			for idx, sr := range roots {
-				fmt.Printf("%d. %s (%s)\n", idx+1, sr.Name, sr.Arch)
+				d := " "
+				if sr.Default {
+					d = "*"
+				}
+				fmt.Printf("%s  %d. %s (%s)\n", d, idx+1, sr.Name, sr.Arch)
+
 			}
 		}
 	} else if ctx.Bool("create") {
-		wzlib_logger.GetCurrentLogger().Info("Creating system root...")
 		name, arch := getNameArch(ctx)
+		wzlib_logger.GetCurrentLogger().Infof("Creating system root: %s (%s)", name, arch)
 		return mgr.CreateSysRoot(name, arch)
 	} else if ctx.Bool("delete") {
-		wzlib_logger.GetCurrentLogger().Info("Creating system root...")
 		name, arch := getNameArch(ctx)
+		wzlib_logger.GetCurrentLogger().Infof("Deleting system root: %s (%s)", name, arch)
 		return mgr.DeleteSysRoot(name, arch)
+	} else if ctx.Bool("set") {
+		name, arch := getNameArch(ctx)
+		wzlib_logger.GetCurrentLogger().Infof("Setting selected system root '%s' (%s) as default", name, arch)
+		return mgr.SetDefaultSysRoot(name, arch)
 	} else {
 		cli.ShowSubcommandHelpAndExit(ctx, 1)
 	}

@@ -5,14 +5,16 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"strconv"
 
 	"github.com/isbm/go-nanoconf"
 )
 
 type SysRoot struct {
-	Name string
-	Arch string
-	Path string
+	Name    string
+	Arch    string
+	Path    string
+	Default bool
 
 	confPath string
 	sysPath  string
@@ -51,6 +53,11 @@ func (sr *SysRoot) Init() (*SysRoot, error) {
 	sr.Name = conf.Root().String("name", "")
 	sr.Arch = conf.Root().String("arch", "")
 
+	isDefault := (*conf.Root().Raw())["default"]
+	if isDefault != nil {
+		sr.Default = isDefault.(bool)
+	}
+
 	if sr.Name == "" || sr.Arch == "" {
 		return nil, fmt.Errorf("Invalid or unknown system root at %s", sr.Path)
 	}
@@ -60,13 +67,12 @@ func (sr *SysRoot) Init() (*SysRoot, error) {
 	return sr, nil
 }
 
-// Create a system root
-func (sr *SysRoot) Create() error {
-	sr.Path = path.Join(sr.sysPath, fmt.Sprintf("%s.%s", sr.Name, sr.Arch))
-	sr.confPath = path.Join(sr.Path, "/etc/sysroot.conf")
-
-	if _, err := os.Stat(sr.Path); !os.IsNotExist(err) {
-		return fmt.Errorf("System root at %s already exists", sr.Path)
+// Checks an existing system root
+func (sr *SysRoot) checkExistingSysroot(checkExists bool) error {
+	if checkExists {
+		if _, err := os.Stat(sr.Path); !os.IsNotExist(err) {
+			return fmt.Errorf("System root at %s already exists", sr.Path)
+		}
 	}
 
 	if sr.Name == "" {
@@ -74,15 +80,40 @@ func (sr *SysRoot) Create() error {
 	} else if sr.Arch == "" {
 		return fmt.Errorf("Architecture was not set for the new sysroot")
 	}
+	return nil
+}
+
+// Create a system root
+func (sr *SysRoot) Create() error {
+	sr.Path = path.Join(sr.sysPath, fmt.Sprintf("%s.%s", sr.Name, sr.Arch))
+	sr.confPath = path.Join(sr.Path, "/etc/sysroot.conf")
+
+	if err := sr.checkExistingSysroot(true); err != nil {
+		return err
+	}
 
 	if err := os.MkdirAll(path.Join(sr.Path, "/etc"), 0755); err != nil {
 		return err
 	}
 
-	return ioutil.WriteFile(sr.confPath, []byte(fmt.Sprintf("name: %s\narch: %s\n", sr.Name, sr.Arch)), 0644)
+	return ioutil.WriteFile(sr.confPath, []byte(fmt.Sprintf("name: %s\narch: %s\ndefault: false\n", sr.Name, sr.Arch)), 0644)
 }
 
 // Delete a system root
 func (sr *SysRoot) Delete() error {
-	return nil
+	if err := sr.checkExistingSysroot(false); err != nil {
+		return err
+	}
+
+	return os.RemoveAll(sr.Path)
+}
+
+// SEtDefault system root
+func (sr *SysRoot) SetDefault(isDefault bool) error {
+	if err := sr.checkExistingSysroot(false); err != nil {
+		return err
+	}
+
+	return ioutil.WriteFile(sr.confPath, []byte(fmt.Sprintf("name: %s\narch: %s\ndefault: %s\n",
+		sr.Name, sr.Arch, strconv.FormatBool(isDefault))), 0644)
 }
