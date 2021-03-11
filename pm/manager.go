@@ -8,9 +8,17 @@ import (
 
 // PackageManager class interface
 type PackageManager interface {
+	// Call underlying package manager.
 	Call(args ...string) (string, string, error)
+
+	// Return a name of the package manager. E.g. on Ubuntu or Debian it will return "apt", on Fedora "dnf" etc.
 	Name() string
+
+	// SetSysroot to the package manager and lock on it
 	SetSysroot(sysroot *sysmgr_sr.SysRoot) PackageManager
+
+	// Setup package manager, once sysroot is given. This will write required configurations
+	Setup() error
 }
 
 // StdProcessStream is just a generic pipe to the STDOUT and nothing else at this time
