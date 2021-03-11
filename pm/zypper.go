@@ -24,6 +24,8 @@ func (pm *ZypperPackageManager) Call(args ...string) (string, string, error) {
 		return "", "", fmt.Errorf("No default sysroot has been found. Please specify one.")
 	}
 
+	args = append([]string{"--root", pm.sysroot.Path}, args...)
+
 	stdout, stderr := wzlib_subprocess.StreamedExec(NewStdProcessStream(), pm.Name(), args...)
 	return stdout, stderr, nil
 }
