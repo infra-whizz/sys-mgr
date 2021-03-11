@@ -41,11 +41,20 @@ func (sr *SysRoot) SetArch(arch string) *SysRoot {
 
 // Init system root.
 func (sr *SysRoot) Init() (*SysRoot, error) {
+	if sr.Name == "" {
+		return nil, fmt.Errorf("Name of the sysroot was not specified while looking it up")
+	}
+
+	if sr.Arch == "" {
+		return nil, fmt.Errorf("Architecture of the sysroot was not specified while looking it up")
+	}
+
+	sr.Path = path.Join(sr.sysPath, fmt.Sprintf("%s.%s", sr.Name, sr.Arch))
 	if _, err := os.Stat(sr.sysPath); os.IsNotExist(err) {
 		return nil, fmt.Errorf("No system root found at %s", sr.sysPath)
 	}
 
-	sr.confPath = path.Join(sr.sysPath, "/etc/sysroot.conf")
+	sr.confPath = path.Join(sr.Path, "/etc/sysroot.conf")
 	if _, err := os.Stat(sr.confPath); os.IsNotExist(err) {
 		return nil, fmt.Errorf("Invalid or unknown system root. Configuration missing at %s", sr.confPath)
 	}
@@ -61,8 +70,6 @@ func (sr *SysRoot) Init() (*SysRoot, error) {
 	if sr.Name == "" || sr.Arch == "" {
 		return nil, fmt.Errorf("Invalid or unknown system root at %s", sr.Path)
 	}
-
-	sr.Path = path.Join(sr.sysPath, fmt.Sprintf("%s.%s", sr.Name, sr.Arch))
 
 	return sr, nil
 }

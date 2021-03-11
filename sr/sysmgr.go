@@ -96,9 +96,15 @@ func (srm *SysrootManager) GetSysRoots() ([]*SysRoot, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	roots := []*SysRoot{}
 	for _, fn := range data {
-		r, err := NewSysRoot(path.Join(srm.sysroots, fn.Name())).Init()
+		na := strings.Split(fn.Name(), ".")
+		if len(na) != 2 {
+			return nil, fmt.Errorf("Unknown sysroot found at %s", path.Join(srm.sysroots, fn.Name()))
+		}
+
+		r, err := NewSysRoot(srm.sysroots).SetName(na[0]).SetArch(na[1]).Init()
 		if err != nil {
 			return nil, err
 		}
