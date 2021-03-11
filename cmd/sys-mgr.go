@@ -8,26 +8,29 @@ import (
 	"strings"
 
 	sysmgr "github.com/infra-whizz/sys-mgr"
+	sysmgr_pm "github.com/infra-whizz/sys-mgr/pm"
 	wzlib_logger "github.com/infra-whizz/wzlib/logger"
 	"github.com/isbm/go-nanoconf"
+	"github.com/sirupsen/logrus"
 	"github.com/thoas/go-funk"
 	"github.com/urfave/cli/v2"
 )
 
 var appname string
-var pkgman string
+var pkgman sysmgr_pm.PackageManager
 var architectures []string
 
 func init() {
 	appname = path.Base(os.Args[0])
 	pkgman = sysmgr.GetCurrentPackageManager()
+	wzlib_logger.GetCurrentLogger().SetLevel(logrus.ErrorLevel)
 	architectures = []string{
 		"x86_64", "aarch64", "ppc64", "ppc64le", "s390x", "riscv64", "mips64", "sparc64",
 	}
 	sort.Strings(architectures)
 
-	if appname != fmt.Sprintf("%s-sysroot", pkgman) {
-		os.Stderr.WriteString(fmt.Sprintf("This app should be called '%s-sysroot'.\n", pkgman))
+	if appname != fmt.Sprintf("%s-sysroot", pkgman.Name()) {
+		os.Stderr.WriteString(fmt.Sprintf("This app should be called '%s-sysroot'.\n", pkgman.Name()))
 		os.Exit(1)
 	}
 
@@ -39,8 +42,8 @@ func init() {
 	}
 }
 
-func runPackageManager(ctx *cli.Context) error {
-	fmt.Print("Package manager \n")
+func runPackageManager() error {
+	pkgman.Call(os.Args[1:]...)
 	return nil
 }
 
@@ -101,8 +104,7 @@ func main() {
 	app := &cli.App{
 		Version: "0.1 Alpha",
 		Name:    appname,
-		Usage:   fmt.Sprintf("System root manager (via %s)", pkgman),
-		Action:  runPackageManager,
+		Usage:   fmt.Sprintf("System root manager (via %s)", pkgman.Name()),
 	}
 
 	app.Commands = []*cli.Command{
@@ -145,7 +147,11 @@ func main() {
 		},
 	}
 
-	if err := app.Run(os.Args); err != nil {
-		wzlib_logger.GetCurrentLogger().Errorf("General error: %s", err.Error())
+	if len(os.Args) == 1 || sysmgr.Any(os.Args, "sysroot", "-h", "--help") {
+		if err := app.Run(os.Args); err != nil {
+			wzlib_logger.GetCurrentLogger().Errorf("General error: %s", err.Error())
+		}
+	} else {
+		runPackageManager()
 	}
 }
