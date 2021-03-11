@@ -53,9 +53,7 @@ func runPackageManager() error {
 	if err != nil {
 		return err
 	}
-	_, _, err = pkgman.SetSysroot(sysroot).Call(os.Args[1:]...)
-
-	return err
+	return pkgman.SetSysroot(sysroot).Call(os.Args[1:]...)
 }
 
 // Get the name of the architecture
@@ -78,7 +76,7 @@ func runSystemManager(ctx *cli.Context) error {
 	if ctx.Bool("list") {
 		roots, err := mgr.GetSysRoots()
 		if err != nil {
-			wzlib_logger.GetCurrentLogger().Errorf("Error while getting system roots: %s", err.Error())
+			return err
 		}
 		if len(roots) > 0 {
 			fmt.Printf("Found %d system roots:\n", len(roots))
@@ -92,9 +90,21 @@ func runSystemManager(ctx *cli.Context) error {
 			}
 		}
 	} else if ctx.Bool("create") {
+		roots, err := mgr.GetSysRoots()
+		if err != nil {
+			return err
+		}
+
 		name, arch := getNameArch(ctx)
 		wzlib_logger.GetCurrentLogger().Infof("Creating system root: %s (%s)", name, arch)
-		return mgr.CreateSysRoot(name, arch)
+		sysroot, err := mgr.CreateSysRoot(name, arch)
+		if err != nil {
+			return err
+		}
+		if err := sysroot.SetDefault(len(roots) == 0); err != nil {
+			return err
+		}
+		return pkgman.SetSysroot(sysroot).Setup()
 	} else if ctx.Bool("delete") {
 		name, arch := getNameArch(ctx)
 		wzlib_logger.GetCurrentLogger().Infof("Deleting system root: %s (%s)", name, arch)

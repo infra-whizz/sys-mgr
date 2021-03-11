@@ -42,12 +42,16 @@ func (srm SysrootManager) checkArch(arch string) error {
 }
 
 // CreateSysRoot creates a system root placeholder
-func (srm *SysrootManager) CreateSysRoot(name string, arch string) error {
+func (srm *SysrootManager) CreateSysRoot(name string, arch string) (*SysRoot, error) {
 	if err := srm.checkArch(arch); err != nil {
-		return err
+		return nil, err
 	}
 
-	return NewSysRoot(srm.sysroots).SetName(name).SetArch(arch).Create()
+	sysroot := NewSysRoot(srm.sysroots).SetName(name).SetArch(arch)
+	if err := sysroot.Create(); err != nil {
+		return nil, err
+	}
+	return sysroot, nil
 }
 
 // DeleteSysroot deletes the entire system root

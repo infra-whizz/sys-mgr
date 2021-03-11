@@ -112,6 +112,9 @@ func (sr *SysRoot) Delete() error {
 		return err
 	}
 
+	if _, err := sr.Init(); err != nil {
+		return err
+	}
 	return os.RemoveAll(sr.Path)
 }
 

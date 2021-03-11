@@ -9,7 +9,7 @@ import (
 // PackageManager class interface
 type PackageManager interface {
 	// Call underlying package manager.
-	Call(args ...string) (string, string, error)
+	Call(args ...string) error
 
 	// Return a name of the package manager. E.g. on Ubuntu or Debian it will return "apt", on Fedora "dnf" etc.
 	Name() string
