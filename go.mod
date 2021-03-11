@@ -12,8 +12,8 @@ require (
 	github.com/isbm/go-nanoconf v0.0.0-20200623180822-caf90de1965e
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/prometheus/procfs v0.6.0 // indirect
-	github.com/sirupsen/logrus v1.8.1 // indirect
-	github.com/thoas/go-funk v0.7.0
+	github.com/sirupsen/logrus v1.8.1
+	github.com/thoas/go-funk v0.8.0
 	github.com/urfave/cli/v2 v2.3.0
 	golang.org/x/sys v0.0.0-20210309074719-68d13333faf2 // indirect
 	howett.net/plist v0.0.0-20201203080718-1454fab16a06 // indirect
