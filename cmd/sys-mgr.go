@@ -9,6 +9,7 @@ import (
 
 	sysmgr "github.com/infra-whizz/sys-mgr"
 	sysmgr_pm "github.com/infra-whizz/sys-mgr/pm"
+	sysmgr_sr "github.com/infra-whizz/sys-mgr/sr"
 	wzlib_logger "github.com/infra-whizz/wzlib/logger"
 	"github.com/isbm/go-nanoconf"
 	"github.com/sirupsen/logrus"
@@ -19,6 +20,7 @@ import (
 var appname string
 var pkgman sysmgr_pm.PackageManager
 var architectures []string
+var mgr *sysmgr_sr.SysrootManager
 
 func init() {
 	appname = path.Base(os.Args[0])
@@ -40,13 +42,23 @@ func init() {
 			os.Exit(1)
 		}
 	}
+
+	confpath := nanoconf.NewNanoconfFinder("sysroots").DefaultSetup(nil)
+	mgr = sysmgr_sr.NewSysrootManager(nanoconf.NewConfig(confpath.SetDefaultConfig(confpath.FindFirst()).FindDefault())).SetSupportedArchitectures(architectures)
 }
 
+// Run underlying package manager
 func runPackageManager() error {
-	pkgman.Call(os.Args[1:]...)
-	return nil
+	sysroot, err := mgr.GetDefaultSysroot()
+	if err != nil {
+		return err
+	}
+	_, _, err = pkgman.SetSysroot(sysroot).Call(os.Args[1:]...)
+
+	return err
 }
 
+// Get the name of the architecture
 func getNameArch(ctx *cli.Context) (string, string) {
 	name := ctx.String("name")
 	if name == "" {
@@ -63,8 +75,6 @@ func getNameArch(ctx *cli.Context) (string, string) {
 
 // Run system manager
 func runSystemManager(ctx *cli.Context) error {
-	confpath := nanoconf.NewNanoconfFinder("sysroots").DefaultSetup(nil)
-	mgr := sysmgr.NewSysrootManager(nanoconf.NewConfig(confpath.SetDefaultConfig(confpath.FindFirst()).FindDefault())).SetSupportedArchitectures(architectures)
 	if ctx.Bool("list") {
 		roots, err := mgr.GetSysRoots()
 		if err != nil {
@@ -147,11 +157,13 @@ func main() {
 		},
 	}
 
+	var err error
 	if len(os.Args) == 1 || sysmgr.Any(os.Args, "sysroot", "-h", "--help") {
-		if err := app.Run(os.Args); err != nil {
-			wzlib_logger.GetCurrentLogger().Errorf("General error: %s", err.Error())
-		}
+		err = app.Run(os.Args)
 	} else {
-		runPackageManager()
+		err = runPackageManager()
+	}
+	if err != nil {
+		wzlib_logger.GetCurrentLogger().Errorf("General error: %s", err.Error())
 	}
 }

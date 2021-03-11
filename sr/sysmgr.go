@@ -1,4 +1,4 @@
-package sysmgr
+package sysmgr_sr
 
 import (
 	"fmt"
@@ -106,4 +106,20 @@ func (srm *SysrootManager) GetSysRoots() ([]*SysRoot, error) {
 	}
 
 	return roots, nil
+}
+
+// GetDefaultSysroot
+func (srm *SysrootManager) GetDefaultSysroot() (*SysRoot, error) {
+	sysroots, err := srm.GetSysRoots()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, sr := range sysroots {
+		if sr.Default {
+			return sr, nil
+		}
+	}
+
+	return nil, nil
 }

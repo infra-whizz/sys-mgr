@@ -2,13 +2,18 @@ package sysmgr_pm
 
 import (
 	"os"
+
+	sysmgr_sr "github.com/infra-whizz/sys-mgr/sr"
 )
 
+// PackageManager class interface
 type PackageManager interface {
 	Call(args ...string) (string, string, error)
 	Name() string
+	SetSysroot(sysroot *sysmgr_sr.SysRoot) PackageManager
 }
 
+// StdProcessStream is just a generic pipe to the STDOUT and nothing else at this time
 type StdProcessStream struct {
 	filePipe *os.File
 }

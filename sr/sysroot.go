@@ -1,4 +1,4 @@
-package sysmgr
+package sysmgr_sr
 
 import (
 	"fmt"
