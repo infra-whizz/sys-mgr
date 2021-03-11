@@ -17,3 +17,7 @@ Last three lines belong to the underlying package manager, i.e. `zypper` in this
     # apt-sysroot install emacs
 
 It will create a sysroot labeled `my_sysroot` for ARM architecture and install there Emacs for that architecture with all the dependencies.
+
+## "_______ doesn't work/not implemented!"
+
+Yup. Your pull request is highly welcome.
