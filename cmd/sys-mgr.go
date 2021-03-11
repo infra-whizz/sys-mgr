@@ -25,7 +25,7 @@ var mgr *sysmgr_sr.SysrootManager
 func init() {
 	appname = path.Base(os.Args[0])
 	pkgman = sysmgr.GetCurrentPackageManager()
-	wzlib_logger.GetCurrentLogger().SetLevel(logrus.ErrorLevel)
+	wzlib_logger.GetCurrentLogger().SetLevel(logrus.InfoLevel)
 	architectures = []string{
 		"x86_64", "aarch64", "ppc64", "ppc64le", "s390x", "riscv64", "mips64", "sparc64",
 	}
