@@ -11,6 +11,7 @@ import (
 	sysmgr_pm "github.com/infra-whizz/sys-mgr/pm"
 	sysmgr_sr "github.com/infra-whizz/sys-mgr/sr"
 	wzlib_logger "github.com/infra-whizz/wzlib/logger"
+	wzlib_subprocess "github.com/infra-whizz/wzlib/subprocess"
 	"github.com/isbm/go-nanoconf"
 	"github.com/sirupsen/logrus"
 	"github.com/thoas/go-funk"
@@ -31,20 +32,61 @@ func init() {
 	}
 	sort.Strings(architectures)
 
-	if appname != fmt.Sprintf("%s-sysroot", pkgman.Name()) {
-		os.Stderr.WriteString(fmt.Sprintf("This app should be called '%s-sysroot'.\n", pkgman.Name()))
+	if appname != fmt.Sprintf("%s-sysroot", pkgman.Name()) && appname != "sysroot-manager" {
+		wzlib_logger.GetCurrentLogger().Errorf("This app should be called '%s-sysroot'.", pkgman.Name())
 		os.Exit(1)
 	}
 
 	if !funk.Contains(os.Args, "-h") && !funk.Contains(os.Args, "--help") {
 		if err := sysmgr.CheckUser(0, 0); err != nil {
-			os.Stderr.WriteString("Root privileges are required to run this command.\n")
+			wzlib_logger.GetCurrentLogger().Error("Root privileges are required to run this command.")
 			os.Exit(1)
 		}
 	}
 
 	confpath := nanoconf.NewNanoconfFinder("sysroots").DefaultSetup(nil)
 	mgr = sysmgr_sr.NewSysrootManager(nanoconf.NewConfig(confpath.SetDefaultConfig(confpath.FindFirst()).FindDefault())).SetSupportedArchitectures(architectures)
+
+	if err := runArchGate(appname, mgr); err != nil {
+		wzlib_logger.GetCurrentLogger().Errorf("Error: %s", err.Error())
+		os.Exit(1)
+	}
+}
+
+// If the command is called as "sysroot-manager", it will run as qemu-<
+func runArchGate(k string, m *sysmgr_sr.SysrootManager) error {
+	// intercept itself as a
+	if k == "sysroot-manager" {
+		dr, _ := m.GetDefaultSysroot()
+		var args []string
+		if _, err := os.Stat("/etc/sysroot.conf"); os.IsNotExist(err) {
+			if dr == nil {
+				return fmt.Errorf("Sysroot was not found though")
+			}
+			// Call natively
+			args = append([]string{
+				path.Join(dr.Path, "/lib/ld-linux-armhf.so.3"), "--library-path",
+				fmt.Sprintf("%s:%s", path.Join(dr.Path, "/usr/lib"), path.Join(dr.Path, "/lib")),
+			}, os.Args[1:]...)
+		} else {
+			// Call chrooted
+			args = os.Args[1:]
+		}
+
+		cmd := wzlib_subprocess.ExecCommand("/usr/bin/qemu-arm", args...)
+		cmd.Stderr = os.Stderr
+		cmd.Stdout = os.Stdout
+		cmd.Stdin = os.Stdin
+		if err := cmd.Run(); err != nil {
+			fmt.Println("Error:", err.Error())
+			os.Exit(1)
+		}
+
+		os.Exit(0)
+	}
+
+	// no-op
+	return nil
 }
 
 // Run underlying package manager
