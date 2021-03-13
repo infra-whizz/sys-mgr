@@ -9,7 +9,7 @@ SOURCES = \
 all: update-deps mainbuild strip
 
 mainbuild: $(SOURCES)
-	$(GO) build -x -o $(OUT) $(SOURCES)
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 $(GO) build -a -tags netgo -ldflags '-w -extldflags "-static"' -o $(OUT) $(SOURCES)
 
 gcc:
 ifneq ($GCCGO,)
@@ -18,16 +18,14 @@ else
 	@echo "Cannot find gccgo"
 endif
 
-strip:
-	strip $(OUT)
-
 update-deps:
 	$(GO) get -u
 
-deps:
-	$(GO) get -v ./... 2>/dev/null ||:
 strip:
 	strip $(OUT)
+
+deps:
+	$(GO) get -v ./... 2>/dev/null ||:
 
 clean:
 	rm $(OUT)
