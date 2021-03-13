@@ -15,7 +15,7 @@ require (
 	github.com/sirupsen/logrus v1.8.1
 	github.com/thoas/go-funk v0.8.0
 	github.com/urfave/cli/v2 v2.3.0
-	golang.org/x/sys v0.0.0-20210309074719-68d13333faf2 // indirect
+	golang.org/x/sys v0.0.0-20210313110737-8e9fff1a3a18 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	howett.net/plist v0.0.0-20201203080718-1454fab16a06 // indirect
 )
