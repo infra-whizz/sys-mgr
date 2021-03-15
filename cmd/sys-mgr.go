@@ -57,6 +57,10 @@ func init() {
 func runArchGate(k string, m *sysmgr_sr.SysrootManager) error {
 	// intercept itself as a
 	if k == "sysroot-manager" {
+		if len(os.Args) == 1 || funk.Contains(os.Args, "-h") || funk.Contains(os.Args, "--help") {
+			fmt.Printf("This is a helper utility and should not be directly used.\nYou are looking for '%s-sysroot' instead.\n", pkgman.Name())
+			os.Exit(0)
+		}
 		dr, _ := m.GetDefaultSysroot()
 		var args []string
 		if _, err := os.Stat("/etc/sysroot.conf"); os.IsNotExist(err) {
