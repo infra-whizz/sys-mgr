@@ -159,6 +159,12 @@ func runSystemManager(ctx *cli.Context) error {
 		name, arch := getNameArch(ctx)
 		wzlib_logger.GetCurrentLogger().Infof("Setting selected system root '%s' (%s) as default", name, arch)
 		return mgr.SetDefaultSysRoot(name, arch)
+	} else if ctx.Bool("path") {
+		sr, err := mgr.GetDefaultSysroot()
+		if err != nil {
+			return err
+		}
+		fmt.Println(sr.Path)
 	} else {
 		cli.ShowSubcommandHelpAndExit(ctx, 1)
 	}
@@ -198,6 +204,11 @@ func main() {
 					Name:    "set",
 					Aliases: []string{"s"},
 					Usage:   "Set default system root by name",
+				},
+				&cli.BoolFlag{
+					Name:    "path",
+					Aliases: []string{"p"},
+					Usage:   "Display path of an active system root",
 				},
 				&cli.StringFlag{
 					Name:    "name",
