@@ -172,6 +172,14 @@ func runSystemManager(ctx *cli.Context) error {
 			return err
 		}
 		fmt.Println(sr.Path)
+	} else if ctx.Bool("init") {
+		sr, err := mgr.GetDefaultSysroot()
+		if err != nil {
+			return err
+		}
+		if err := binfmt.Register(sr.Arch); err != nil {
+			return err
+		}
 	} else {
 		cli.ShowSubcommandHelpAndExit(ctx, 1)
 	}
@@ -206,6 +214,11 @@ func main() {
 					Name:    "delete",
 					Aliases: []string{"d"},
 					Usage:   "Delete a system root by name",
+				},
+				&cli.BoolFlag{
+					Name:    "init",
+					Aliases: []string{"i"},
+					Usage:   "Init default system root",
 				},
 				&cli.BoolFlag{
 					Name:    "set",
