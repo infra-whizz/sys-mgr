@@ -53,7 +53,7 @@ func init() {
 	}
 }
 
-// If the command is called as "sysroot-manager", it will run as qemu-<
+// If the command is called as "sysroot-manager", it will run as qemu-<arch>
 func runArchGate(k string, m *sysmgr_sr.SysrootManager) error {
 	// intercept itself as a
 	if k == "sysroot-manager" {
