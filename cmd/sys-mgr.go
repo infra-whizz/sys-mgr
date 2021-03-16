@@ -165,7 +165,10 @@ func runSystemManager(ctx *cli.Context) error {
 	} else if ctx.Bool("set") {
 		name, arch := getNameArch(ctx)
 		wzlib_logger.GetCurrentLogger().Infof("Setting selected system root '%s' (%s) as default", name, arch)
-		return mgr.SetDefaultSysRoot(name, arch)
+		if err := mgr.SetDefaultSysRoot(name, arch); err != nil {
+			return err
+		}
+		return binfmt.Register(arch)
 	} else if ctx.Bool("path") {
 		sr, err := mgr.GetDefaultSysroot()
 		if err != nil {
