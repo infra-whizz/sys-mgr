@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	sysmgr "github.com/infra-whizz/sys-mgr"
+	sysmgr_arch "github.com/infra-whizz/sys-mgr/arch"
 	sysmgr_pm "github.com/infra-whizz/sys-mgr/pm"
 	sysmgr_sr "github.com/infra-whizz/sys-mgr/sr"
 	wzlib_logger "github.com/infra-whizz/wzlib/logger"
@@ -22,14 +23,20 @@ var appname string
 var pkgman sysmgr_pm.PackageManager
 var architectures []string
 var mgr *sysmgr_sr.SysrootManager
+var binfmt *sysmgr_arch.BinFormat
 
 func init() {
 	appname = path.Base(os.Args[0])
 	pkgman = sysmgr.GetCurrentPackageManager()
+	binfmt = sysmgr_arch.NewBinFormat()
+
 	wzlib_logger.GetCurrentLogger().SetLevel(logrus.InfoLevel)
-	architectures = []string{
-		"x86_64", "aarch64", "ppc64", "ppc64le", "s390x", "riscv64", "mips64", "sparc64",
+
+	architectures = []string{}
+	for _, arch := range binfmt.Architectures {
+		architectures = append(architectures, arch.Name)
 	}
+
 	sort.Strings(architectures)
 
 	if appname != fmt.Sprintf("%s-sysroot", pkgman.Name()) && appname != "sysroot-manager" {
