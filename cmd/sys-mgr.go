@@ -44,13 +44,6 @@ func init() {
 		os.Exit(1)
 	}
 
-	if !funk.Contains(os.Args, "-h") && !funk.Contains(os.Args, "--help") {
-		if err := sysmgr.CheckUser(0, 0); err != nil {
-			wzlib_logger.GetCurrentLogger().Error("Root privileges are required to run this command.")
-			os.Exit(1)
-		}
-	}
-
 	confpath := nanoconf.NewNanoconfFinder("sysroots").DefaultSetup(nil)
 	mgr = sysmgr_sr.NewSysrootManager(nanoconf.NewConfig(confpath.SetDefaultConfig(confpath.FindFirst()).FindDefault())).SetSupportedArchitectures(architectures)
 
@@ -60,7 +53,16 @@ func init() {
 	}
 }
 
-// If the command is called as "sysroot-manager", it will run as qemu-<arch>
+// Exit if the current user is not root
+func exitOnNonRootUID() {
+	if !funk.Contains(os.Args, "-h") && !funk.Contains(os.Args, "--help") {
+		if err := sysmgr.CheckUser(0, 0); err != nil {
+			wzlib_logger.GetCurrentLogger().Error("Root privileges are required to run this command.")
+			os.Exit(1)
+		}
+	}
+}
+
 func runArchGate(k string, m *sysmgr_sr.SysrootManager) error {
 	// intercept itself as a
 	if k == "sysroot-manager" {
@@ -143,6 +145,7 @@ func runSystemManager(ctx *cli.Context) error {
 			}
 		}
 	} else if ctx.Bool("create") {
+		exitOnNonRootUID()
 		roots, err := mgr.GetSysRoots()
 		if err != nil {
 			return err
@@ -159,10 +162,12 @@ func runSystemManager(ctx *cli.Context) error {
 		}
 		return pkgman.SetSysroot(sysroot).Setup()
 	} else if ctx.Bool("delete") {
+		exitOnNonRootUID()
 		name, arch := getNameArch(ctx)
 		wzlib_logger.GetCurrentLogger().Infof("Deleting system root: %s (%s)", name, arch)
 		return mgr.DeleteSysRoot(name, arch)
 	} else if ctx.Bool("set") {
+		exitOnNonRootUID()
 		name, arch := getNameArch(ctx)
 		wzlib_logger.GetCurrentLogger().Infof("Setting selected system root '%s' (%s) as default", name, arch)
 		if err := mgr.SetDefaultSysRoot(name, arch); err != nil {
@@ -176,7 +181,9 @@ func runSystemManager(ctx *cli.Context) error {
 		}
 		fmt.Println(sr.Path)
 	} else if ctx.Bool("init") {
+		exitOnNonRootUID()
 		sr, err := mgr.GetDefaultSysroot()
+
 		if err != nil {
 			return err
 		}
