@@ -4,11 +4,14 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path"
 	"strconv"
 	"syscall"
 
+	wzlib_logger "github.com/infra-whizz/wzlib/logger"
 	"github.com/isbm/go-nanoconf"
+	"github.com/isbm/go-shutil"
 )
 
 type SysRoot struct {
@@ -19,6 +22,9 @@ type SysRoot struct {
 
 	confPath string
 	sysPath  string
+	qemuPath string
+
+	wzlib_logger.WzLogger
 }
 
 func NewSysRoot(syspath string) *SysRoot {
@@ -48,6 +54,11 @@ func (sr *SysRoot) Init() (*SysRoot, error) {
 
 	if sr.Arch == "" {
 		return nil, fmt.Errorf("Architecture of the sysroot was not specified while looking it up")
+	}
+
+	// Already initialised
+	if sr.Path != "" {
+		return sr, nil
 	}
 
 	sr.Path = path.Join(sr.sysPath, fmt.Sprintf("%s.%s", sr.Name, sr.Arch))
@@ -91,20 +102,89 @@ func (sr *SysRoot) checkExistingSysroot(checkExists bool) error {
 	return nil
 }
 
+// replicate self
+func (sr *SysRoot) replicate() error {
+	selfPath, err := os.Executable()
+	if err != nil {
+		return err
+	}
+
+	for _, bin := range []string{selfPath, sr.qemuPath} {
+		sr.GetLogger().Debugf("Preparing %s", bin)
+
+		// Setup target dir
+		target := path.Join(sr.Path, path.Dir(bin))
+		if _, err = os.Stat(target); os.IsNotExist(err) {
+			sr.GetLogger().Debugf("Creating directory %s", target)
+			if err = os.MkdirAll(target, 0755); err != nil {
+				return err
+			}
+		}
+
+		// Copy required utility
+		target = path.Join(target, path.Base(bin))
+		sr.GetLogger().Debugf("Copying %s to %s", bin, target)
+		if err = shutil.CopyFile(bin, target, false); err != nil {
+			return err
+		}
+		sr.GetLogger().Debugf("Setting %s as 0755", target)
+		if err = syscall.Chmod(target, 0755); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // Create a system root
 func (sr *SysRoot) Create() error {
+	var err error
+	if sr.qemuPath, err = exec.LookPath(fmt.Sprintf("qemu-%s", sr.Arch)); err != nil {
+		return err
+	}
+
 	sr.Path = path.Join(sr.sysPath, fmt.Sprintf("%s.%s", sr.Name, sr.Arch))
 	sr.confPath = path.Join(sr.Path, "/etc/sysroot.conf")
 
-	if err := sr.checkExistingSysroot(true); err != nil {
+	if err = sr.checkExistingSysroot(true); err != nil {
 		return err
 	}
 
-	if err := os.MkdirAll(path.Join(sr.Path, "/etc"), 0755); err != nil {
+	for _, d := range []string{"/etc", "/proc", "/dev", "/sys", "/run"} {
+		if err = os.MkdirAll(path.Join(sr.Path, d), 0755); err != nil {
+			return err
+		}
+	}
+
+	if err = ioutil.WriteFile(sr.confPath, []byte(fmt.Sprintf("name: %s\narch: %s\ndefault: false\n", sr.Name, sr.Arch)), 0644); err != nil {
 		return err
 	}
 
-	return ioutil.WriteFile(sr.confPath, []byte(fmt.Sprintf("name: %s\narch: %s\ndefault: false\n", sr.Name, sr.Arch)), 0644)
+	return sr.replicate()
+}
+
+// UmountBinds removes proc, dev, sys and run
+func (sr *SysRoot) UmountBinds() error {
+	if _, err := sr.Init(); err != nil {
+		return err
+	}
+
+	// pre-umount, if anything
+	for _, d := range []string{"/proc", "/dev", "/sys", "/run"} {
+		d = path.Join(sr.Path, d)
+		if err := syscall.Unmount(d, syscall.MNT_FORCE); err != nil {
+			sr.GetLogger().Warnf("Unable to unmount %s", d)
+		}
+		files, err := ioutil.ReadDir(d)
+		if err != nil {
+			return err
+		}
+		if len(files) > 0 {
+			return fmt.Errorf("Unable to unmount %s. Please umount it manually.", d)
+		}
+	}
+
+	return nil
 }
 
 // Delete a system root

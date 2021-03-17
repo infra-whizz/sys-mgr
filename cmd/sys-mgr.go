@@ -30,7 +30,12 @@ func init() {
 	pkgman = sysmgr.GetCurrentPackageManager()
 	binfmt = sysmgr_arch.NewBinFormat()
 
-	wzlib_logger.GetCurrentLogger().SetLevel(logrus.InfoLevel)
+	// setup logger
+	if funk.Contains(os.Args, "--verbose") || funk.Contains(os.Args, "-v") {
+		wzlib_logger.GetCurrentLogger().SetLevel(logrus.TraceLevel)
+	} else {
+		wzlib_logger.GetCurrentLogger().SetLevel(logrus.ErrorLevel)
+	}
 
 	architectures = []string{}
 	for _, arch := range binfmt.Architectures {
@@ -175,6 +180,18 @@ func runSystemManager(ctx *cli.Context) error {
 	} else if ctx.Bool("set") {
 		exitOnNonRootUID()
 		name, arch := getNameArch(ctx)
+
+		// Detach current default
+		psr, err := mgr.GetDefaultSysroot()
+		if err != nil {
+			return err
+		}
+		if psr != nil {
+			if err := psr.UmountBinds(); err != nil {
+				return err
+			}
+		}
+
 		wzlib_logger.GetCurrentLogger().Infof("Setting selected system root '%s' (%s) as default", name, arch)
 		if err := mgr.SetDefaultSysRoot(name, arch); err != nil {
 			return err
@@ -182,10 +199,13 @@ func runSystemManager(ctx *cli.Context) error {
 		if err := binfmt.Register(arch); err != nil {
 			return err
 		}
+
 		sr, err := mgr.GetDefaultSysroot()
 		if err != nil {
 			return err
 		}
+
+		// Setup systemd
 		sds := sysmgr_arch.NewSystemdService().SetPackageManager(pkgman)
 		if err := sds.Remove(); err != nil {
 			return err
@@ -193,6 +213,8 @@ func runSystemManager(ctx *cli.Context) error {
 		if err := sds.Create(sr.Arch); err != nil {
 			return err
 		}
+
+		// Activate
 		return sr.Activate()
 	} else if ctx.Bool("path") {
 		sr, err := mgr.GetDefaultSysroot()
@@ -275,6 +297,11 @@ func main() {
 					Name:    "arch",
 					Aliases: []string{"a"},
 					Usage:   fmt.Sprintf("Set architecture for the system root. Choices: %s.", strings.Join(architectures, ", ")),
+				},
+				&cli.BoolFlag{
+					Name:    "verbose",
+					Aliases: []string{"v"},
+					Usage:   "Show debugging log",
 				},
 			},
 		},

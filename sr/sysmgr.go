@@ -60,7 +60,12 @@ func (srm *SysrootManager) DeleteSysRoot(name string, arch string) error {
 		return err
 	}
 
-	return NewSysRoot(srm.sysroots).SetName(name).SetArch(arch).Delete()
+	sysroot := NewSysRoot(srm.sysroots).SetName(name).SetArch(arch)
+	if err := sysroot.UmountBinds(); err != nil {
+		return err
+	}
+
+	return sysroot.Delete()
 }
 
 // SetDefaultSysRoot to be locked on the particular package manager.
