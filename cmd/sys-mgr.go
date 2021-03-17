@@ -186,6 +186,13 @@ func runSystemManager(ctx *cli.Context) error {
 		if err != nil {
 			return err
 		}
+		sds := sysmgr_arch.NewSystemdService().SetPackageManager(pkgman)
+		if err := sds.Remove(); err != nil {
+			return err
+		}
+		if err := sds.Create(sr.Arch); err != nil {
+			return err
+		}
 		return sr.Activate()
 	} else if ctx.Bool("path") {
 		sr, err := mgr.GetDefaultSysroot()
