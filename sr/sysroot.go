@@ -6,6 +6,7 @@ import (
 	"os"
 	"path"
 	"strconv"
+	"syscall"
 
 	"github.com/isbm/go-nanoconf"
 )
@@ -126,4 +127,14 @@ func (sr *SysRoot) SetDefault(isDefault bool) error {
 
 	return ioutil.WriteFile(sr.confPath, []byte(fmt.Sprintf("name: %s\narch: %s\ndefault: %s\n",
 		sr.Name, sr.Arch, strconv.FormatBool(isDefault))), 0644)
+}
+
+// Activate default sysroot (mount runtime directories)
+func (sr *SysRoot) Activate() error {
+	for _, src := range []string{"/proc", "/sys", "/dev", "/run"} {
+		if err := syscall.Mount(src, path.Join(sr.Path, src), "", syscall.MS_BIND, ""); err != nil {
+			return err
+		}
+	}
+	return nil
 }
