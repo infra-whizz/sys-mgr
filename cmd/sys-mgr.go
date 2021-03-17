@@ -151,16 +151,22 @@ func runSystemManager(ctx *cli.Context) error {
 			return err
 		}
 
+		isDefault := len(roots) == 0
 		name, arch := getNameArch(ctx)
 		wzlib_logger.GetCurrentLogger().Infof("Creating system root: %s (%s)", name, arch)
 		sysroot, err := mgr.CreateSysRoot(name, arch)
 		if err != nil {
 			return err
 		}
-		if err := sysroot.SetDefault(len(roots) == 0); err != nil {
+		if err := sysroot.SetDefault(isDefault); err != nil {
 			return err
 		}
-		return pkgman.SetSysroot(sysroot).Setup()
+		if err := pkgman.SetSysroot(sysroot).Setup(); err != nil {
+			return err
+		}
+		if isDefault {
+			return sysroot.Activate()
+		}
 	} else if ctx.Bool("delete") {
 		exitOnNonRootUID()
 		name, arch := getNameArch(ctx)
