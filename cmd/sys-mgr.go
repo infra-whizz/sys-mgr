@@ -179,7 +179,14 @@ func runSystemManager(ctx *cli.Context) error {
 		if err := mgr.SetDefaultSysRoot(name, arch); err != nil {
 			return err
 		}
-		return binfmt.Register(arch)
+		if err := binfmt.Register(arch); err != nil {
+			return err
+		}
+		sr, err := mgr.GetDefaultSysroot()
+		if err != nil {
+			return err
+		}
+		return sr.Activate()
 	} else if ctx.Bool("path") {
 		sr, err := mgr.GetDefaultSysroot()
 		if err != nil {
