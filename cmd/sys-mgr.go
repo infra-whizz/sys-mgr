@@ -187,9 +187,15 @@ func runSystemManager(ctx *cli.Context) error {
 		if err != nil {
 			return err
 		}
+
 		if err := binfmt.Register(sr.Arch); err != nil {
 			return err
 		}
+
+		if err := sysmgr_arch.NewSystemdService().SetPackageManager(pkgman).Create(sr.Arch); err != nil {
+			return err
+		}
+		return sr.Activate()
 	} else {
 		cli.ShowSubcommandHelpAndExit(ctx, 1)
 	}
