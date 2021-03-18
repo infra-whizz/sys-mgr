@@ -150,7 +150,7 @@ func (sr *SysRoot) Create() error {
 		return err
 	}
 
-	for _, d := range []string{"/etc", "/proc", "/dev", "/sys", "/run"} {
+	for _, d := range []string{"/etc", "/proc", "/dev", "/sys", "/run", "/tmp"} {
 		if err = os.MkdirAll(path.Join(sr.Path, d), 0755); err != nil {
 			return err
 		}
