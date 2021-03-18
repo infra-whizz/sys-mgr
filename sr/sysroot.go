@@ -197,6 +197,19 @@ func (sr *SysRoot) Delete() error {
 	if _, err := sr.Init(); err != nil {
 		return err
 	}
+
+	// check if the sysroot still bound to something
+	for _, d := range []string{"/proc", "/dev", "/sys", "/run"} {
+		d = path.Join(sr.Path, d)
+		files, err := ioutil.ReadDir(d)
+		if err != nil {
+			return err
+		}
+		if len(files) > 0 {
+			return fmt.Errorf("Directory %s seems not properly unmounted. Please check it, unmount manually and try again.", d)
+		}
+	}
+
 	return os.RemoveAll(sr.Path)
 }
 
