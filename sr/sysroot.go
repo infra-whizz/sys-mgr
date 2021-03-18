@@ -12,6 +12,7 @@ import (
 	wzlib_logger "github.com/infra-whizz/wzlib/logger"
 	"github.com/isbm/go-nanoconf"
 	"github.com/isbm/go-shutil"
+	"golang.org/x/sys/unix"
 )
 
 type SysRoot struct {
@@ -172,7 +173,7 @@ func (sr *SysRoot) UmountBinds() error {
 	// pre-umount, if anything
 	for _, d := range []string{"/proc", "/dev", "/sys", "/run"} {
 		d = path.Join(sr.Path, d)
-		if err := syscall.Unmount(d, syscall.MNT_FORCE); err != nil {
+		if err := syscall.Unmount(d, syscall.MNT_DETACH|syscall.MNT_FORCE|unix.UMOUNT_NOFOLLOW); err != nil {
 			sr.GetLogger().Warnf("Unable to unmount %s", d)
 		}
 		files, err := ioutil.ReadDir(d)
@@ -180,7 +181,7 @@ func (sr *SysRoot) UmountBinds() error {
 			return err
 		}
 		if len(files) > 0 {
-			return fmt.Errorf("Unable to unmount %s. Please umount it manually.", d)
+			return fmt.Errorf("Failed to unmount %s. Please umount it manually.", d)
 		}
 	}
 
