@@ -180,7 +180,9 @@ func (sr *SysRoot) Create() error {
 			if err != nil {
 				return err
 			}
-			ioutil.WriteFile(tgtpath, data, 0644)
+			if err := ioutil.WriteFile(tgtpath, data, 0644); err != nil {
+				return err
+			}
 		}
 	}
 
