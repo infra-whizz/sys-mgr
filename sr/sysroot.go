@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path"
 	"strconv"
+	"strings"
 	"syscall"
 
 	wzlib_logger "github.com/infra-whizz/wzlib/logger"
@@ -157,8 +158,30 @@ func (sr *SysRoot) Create() error {
 		}
 	}
 
+	// Create sysroot configuration
 	if err = ioutil.WriteFile(sr.confPath, []byte(fmt.Sprintf("name: %s\narch: %s\ndefault: false\n", sr.Name, sr.Arch)), 0644); err != nil {
 		return err
+	}
+
+	// Add basic skeleton for package manager should work
+	files, err := ioutil.ReadDir("/etc")
+	if err != nil {
+		return err
+	}
+
+	// Copy *-relese files
+	for _, f := range files {
+		if strings.HasSuffix(f.Name(), "-release") {
+			srcpath := path.Join("/etc", f.Name())
+			tgtpath := path.Join(sr.Path, "etc", f.Name())
+			sr.GetLogger().Debugf("Copying %s to %s", srcpath, tgtpath)
+
+			data, err := ioutil.ReadFile(srcpath)
+			if err != nil {
+				return err
+			}
+			ioutil.WriteFile(tgtpath, data, 0644)
+		}
 	}
 
 	return sr.replicate()
