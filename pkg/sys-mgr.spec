@@ -47,7 +47,7 @@ go build -x -mod=vendor -buildmode=pie -o %{name} ./cmd/sys-mgr.go
 %install
 install -D -m 0755 %{name} %{buildroot}%{_bindir}/%{name}
 mkdir -p %{buildroot}%{_sysconfdir}
-install -m 0644 ./doc/sysroots.conf %{buildroot}%{_sysconfdir}/sysroots.conf
+install -m 0644 ./etc/sysroots.conf %{buildroot}%{_sysconfdir}/sysroots.conf
 
 %files
 %defattr(-,root,root)
