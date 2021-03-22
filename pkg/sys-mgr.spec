@@ -40,6 +40,7 @@ CGO_ENABLED=0 go build -a -mod=vendor -tags netgo -ldflags '-w -extldflags "-sta
 %install
 install -D -m 0755 %{name} %{buildroot}%{_bindir}/%{name}
 mkdir -p %{buildroot}%{_sysconfdir}
+mkdir %{buildroot}/usr/sysroots
 install -m 0644 ./etc/sysroots.conf %{buildroot}%{_sysconfdir}/sysroots.conf
 ln -s %{name} %{buildroot}%{_bindir}/zypper-sysroot
 
@@ -48,6 +49,7 @@ ln -s %{name} %{buildroot}%{_bindir}/zypper-sysroot
 %{_bindir}/%{name}
 %{_bindir}/zypper-sysroot
 %dir %{_sysconfdir}
+%dir /usr/sysroots
 %config /etc/sysroots.conf
 
 %changelog
