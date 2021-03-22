@@ -37,12 +37,8 @@ System root manager allows installing and fully manage a separate, alternative s
 %setup -q -T -D -a 1
 
 %build
-# Output for log purpuses
-go env
+CGO_ENABLED=0 go build -a -mod=vendor -tags netgo -ldflags '-w -extldflags "-static"' -o %{name} ./cmd/*go
 
-# Build the binary
-#go build -x -mod=vendor -buildmode=pie -o %{name} ./cmd/sys-mgr.go
-go build -x -mod=vendor -buildmode=pie -o %{name} ./cmd/sys-mgr.go
 
 %install
 install -D -m 0755 %{name} %{buildroot}%{_bindir}/%{name}
