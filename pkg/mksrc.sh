@@ -67,7 +67,7 @@ function copy_packaged_sources {
     for d in ${P_DOC_DIRS[@]}; do
 	echo "Copying documentation directory $d to $dst..."
 	mkdir -p $dst/$d
-	cp -r ../$d $dst/$d
+	cp -r ../$d $dst
     done
 
     # copy cmd
