@@ -24,6 +24,7 @@ var pkgman sysmgr_pm.PackageManager
 var architectures []string
 var mgr *sysmgr_sr.SysrootManager
 var binfmt *sysmgr_arch.BinFormat
+var VERSION string = "0.1"
 
 func init() {
 	appname = path.Base(os.Args[0])
@@ -247,7 +248,7 @@ func runSystemManager(ctx *cli.Context) error {
 
 func main() {
 	app := &cli.App{
-		Version: "0.1 Alpha",
+		Version: VERSION,
 		Name:    appname,
 		Usage:   fmt.Sprintf("System root manager (via %s)", pkgman.Name()),
 	}
