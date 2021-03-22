@@ -27,8 +27,6 @@ BuildRequires:  golang-packaging
 BuildRequires:  golang(API) >= 1.13
 Requires:       qemu-linux-user
 
-%{?systemd_ordering}
-
 %description
 System root manager allows installing and fully manage a separate, alternative system roots for cross-compilation purposes.
 
@@ -39,15 +37,16 @@ System root manager allows installing and fully manage a separate, alternative s
 %build
 CGO_ENABLED=0 go build -a -mod=vendor -tags netgo -ldflags '-w -extldflags "-static"' -o %{name} ./cmd/*go
 
-
 %install
 install -D -m 0755 %{name} %{buildroot}%{_bindir}/%{name}
 mkdir -p %{buildroot}%{_sysconfdir}
 install -m 0644 ./etc/sysroots.conf %{buildroot}%{_sysconfdir}/sysroots.conf
+ln -s %{name} %{buildroot}%{_bindir}/zypper-sysroot
 
 %files
 %defattr(-,root,root)
 %{_bindir}/%{name}
+%{_bindir}/zypper-sysroot
 %dir %{_sysconfdir}
 %config /etc/sysroots.conf
 
