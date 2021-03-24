@@ -53,14 +53,17 @@ func NewSysrootManager(appname string) *SysrootManager {
 	return srm
 }
 
+// AppName returns a name of the binary, as it should have multiple ones
 func (srm SysrootManager) AppName() string {
 	return srm.appname
 }
 
+// PkgManager underneath the system root manager
 func (srm SysrootManager) PkgManager() sysmgr_pm.PackageManager {
 	return srm.pkgman
 }
 
+// Architectures returns a list of supported archs
 func (srm SysrootManager) Architectures() []string {
 	return srm.architectures
 }
@@ -75,6 +78,7 @@ func (srm *SysrootManager) ExitOnNonRootUID() {
 	}
 }
 
+// RunArchGate runs every time to check if it should intercept any external calls
 func (srm SysrootManager) RunArchGate() error {
 	// intercept itself as a
 	if srm.appname == "sysroot-manager" {
