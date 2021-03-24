@@ -80,7 +80,6 @@ func (srm SysrootManager) ExitOnNonRootUID() {
 func (srm SysrootManager) RunArchGate() error {
 	// intercept itself as a
 	if srm.appname == "sysroot-manager" {
-		fmt.Println(os.Args)
 		if len(os.Args) == 1 || funk.Contains(os.Args, "-h") || funk.Contains(os.Args, "--help") {
 			fmt.Printf("This is a helper utility and should not be directly used.\nYou are looking for '%s-sysroot' instead.\n", srm.pkgman.Name())
 			os.Exit(0)
