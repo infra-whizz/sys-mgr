@@ -136,5 +136,5 @@ func (srm *SysrootManager) GetDefaultSysroot() (*SysRoot, error) {
 		}
 	}
 
-	return nil, nil
+	return nil, fmt.Errorf("No default system root has been found. Please setup one.")
 }
