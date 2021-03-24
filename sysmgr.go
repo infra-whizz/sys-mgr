@@ -2,9 +2,12 @@ package sysmgr
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path"
+	"path/filepath"
 	"sort"
+	"strings"
 
 	sysmgr_arch "github.com/infra-whizz/sys-mgr/arch"
 	sysmgr_pm "github.com/infra-whizz/sys-mgr/pm"
@@ -45,11 +48,6 @@ func NewSysrootManager(appname string) *SysrootManager {
 	srm.mgr = sysmgr_sr.NewSysrootManager(nanoconf.NewConfig(confpath.SetDefaultConfig(confpath.FindFirst()).FindDefault())).
 		SetSupportedArchitectures(srm.architectures)
 
-	if srm.appname != fmt.Sprintf("%s-sysroot", srm.pkgman.Name()) && srm.appname != "sysroot-manager" {
-		wzlib_logger.GetCurrentLogger().Errorf("This app should be called '%s-sysroot'.", srm.pkgman.Name())
-		os.Exit(1)
-	}
-
 	return srm
 }
 
@@ -69,7 +67,7 @@ func (srm SysrootManager) Architectures() []string {
 }
 
 // ExitOnNonRootUID will terminate program immediately if caller is not UID root.
-func (srm *SysrootManager) ExitOnNonRootUID() {
+func (srm SysrootManager) ExitOnNonRootUID() {
 	if !funk.Contains(os.Args, "-h") && !funk.Contains(os.Args, "--help") {
 		if err := CheckUser(0, 0); err != nil {
 			wzlib_logger.GetCurrentLogger().Error("Root privileges are required to run this command.")
@@ -82,6 +80,7 @@ func (srm *SysrootManager) ExitOnNonRootUID() {
 func (srm SysrootManager) RunArchGate() error {
 	// intercept itself as a
 	if srm.appname == "sysroot-manager" {
+		fmt.Println(os.Args)
 		if len(os.Args) == 1 || funk.Contains(os.Args, "-h") || funk.Contains(os.Args, "--help") {
 			fmt.Printf("This is a helper utility and should not be directly used.\nYou are looking for '%s-sysroot' instead.\n", srm.pkgman.Name())
 			os.Exit(0)
@@ -93,8 +92,12 @@ func (srm SysrootManager) RunArchGate() error {
 				return fmt.Errorf("Sysroot was not found though")
 			}
 			// Call natively
+			linker, err := srm.FindDynLinker()
+			if err != nil {
+				return err
+			}
 			args = append([]string{
-				path.Join(dr.Path, "/lib/ld-linux-armhf.so.3"), "--library-path",
+				path.Join(dr.Path, linker), "--library-path",
 				fmt.Sprintf("%s:%s", path.Join(dr.Path, "/usr/lib"), path.Join(dr.Path, "/lib")),
 			}, os.Args[1:]...)
 		} else {
@@ -114,6 +117,12 @@ func (srm SysrootManager) RunArchGate() error {
 		os.Exit(0)
 	}
 
+	if srm.appname != fmt.Sprintf("%s-sysroot", srm.pkgman.Name()) {
+		wzlib_logger.GetCurrentLogger().Errorf("Call: %s, args %s", srm.appname, os.Args)
+		wzlib_logger.GetCurrentLogger().Errorf("This app should be called '%s-sysroot'.", srm.pkgman.Name())
+		os.Exit(1)
+	}
+
 	// no-op
 	return nil
 }
@@ -128,7 +137,7 @@ func (srm SysrootManager) RunPackageManager() error {
 }
 
 // Get the name of the architecture
-func getNameArch(ctx *cli.Context) (string, string) {
+func (srm SysrootManager) getNameArch(ctx *cli.Context) (string, string) {
 	name := ctx.String("name")
 	if name == "" {
 		wzlib_logger.GetCurrentLogger().Errorf("The name of the sysroot is missing.")
@@ -168,7 +177,7 @@ func (srm SysrootManager) RunSystemManager(ctx *cli.Context) error {
 		}
 
 		isDefault := len(roots) == 0
-		name, arch := getNameArch(ctx)
+		name, arch := srm.getNameArch(ctx)
 		wzlib_logger.GetCurrentLogger().Infof("Creating system root: %s (%s)", name, arch)
 		sysroot, err := srm.mgr.CreateSysRoot(name, arch)
 		if err != nil {
@@ -185,12 +194,12 @@ func (srm SysrootManager) RunSystemManager(ctx *cli.Context) error {
 		}
 	} else if ctx.Bool("delete") {
 		srm.ExitOnNonRootUID()
-		name, arch := getNameArch(ctx)
+		name, arch := srm.getNameArch(ctx)
 		wzlib_logger.GetCurrentLogger().Infof("Deleting system root: %s (%s)", name, arch)
 		return srm.mgr.DeleteSysRoot(name, arch)
 	} else if ctx.Bool("set") {
 		srm.ExitOnNonRootUID()
-		name, arch := getNameArch(ctx)
+		name, arch := srm.getNameArch(ctx)
 
 		// Detach current default
 		psr, err := srm.mgr.GetDefaultSysroot()
@@ -254,4 +263,36 @@ func (srm SysrootManager) RunSystemManager(ctx *cli.Context) error {
 	}
 
 	return nil
+}
+
+// FindDynLinker returns a path to a dynamic linker of the sysroot.
+// This is needed only when running binaries of the sysroot,
+// so at the time of sysroot creation, the glibc is not there yet.
+//
+// First time it will scan standard places, like /lib or /lib64
+func (srm *SysrootManager) FindDynLinker() (string, error) {
+	sr, err := srm.mgr.GetDefaultSysroot()
+	if err != nil {
+		return "", err
+	}
+
+	for _, ldl := range []string{"lib64", "lib"} {
+		libpath := path.Join(sr.Path, ldl)
+		content, err := ioutil.ReadDir(libpath)
+		if err != nil {
+			continue
+		}
+		for _, f := range content {
+			if !f.IsDir() && strings.HasPrefix(f.Name(), "ld-linux") {
+				ldpath, err := filepath.EvalSymlinks(path.Join(libpath, f.Name()))
+				if err != nil {
+					return "", err
+				}
+				ldpath = ldpath[len(sr.Path):]
+				// TODO: Save to the config
+				return ldpath, nil
+			}
+		}
+	}
+	return "", fmt.Errorf("ld.so was not found for the sysroot at %s", sr.Path)
 }

@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"path"
 	"strings"
 
 	sysmgr "github.com/infra-whizz/sys-mgr"
@@ -16,7 +17,7 @@ var sm *sysmgr.SysrootManager
 var VERSION string = "0.1"
 
 func init() {
-	sm = sysmgr.NewSysrootManager(os.Args[0])
+	sm = sysmgr.NewSysrootManager(path.Base(os.Args[0]))
 
 	// setup logger
 	if funk.Contains(os.Args, "--verbose") || funk.Contains(os.Args, "-v") {
