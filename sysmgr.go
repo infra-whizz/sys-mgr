@@ -88,8 +88,6 @@ func (srm SysrootManager) RunArchGate() error {
 		var args []string
 		if _, err := os.Stat("/etc/sysroot.conf"); os.IsNotExist(err) {
 			if dr == nil {
-				return nil
-
 				return fmt.Errorf("Sysroot was not found though")
 			}
 			// Call natively
