@@ -88,6 +88,8 @@ func (srm SysrootManager) RunArchGate() error {
 		var args []string
 		if _, err := os.Stat("/etc/sysroot.conf"); os.IsNotExist(err) {
 			if dr == nil {
+				return nil
+
 				return fmt.Errorf("Sysroot was not found though")
 			}
 			// Call natively
@@ -150,117 +152,155 @@ func (srm SysrootManager) getNameArch(ctx *cli.Context) (string, string) {
 	return name, arch
 }
 
+// actionSetDefault sets the systemroot as default, installing all the necessary bits
+func (srm SysrootManager) actionSetDefault(ctx *cli.Context) error {
+	srm.ExitOnNonRootUID()
+	name, arch := srm.getNameArch(ctx)
+
+	// Detach current default
+	psr, err := srm.mgr.GetDefaultSysroot()
+	if err != nil {
+		return err
+	}
+	if psr != nil {
+		if err := psr.UmountBinds(); err != nil {
+			return err
+		}
+	}
+
+	srm.GetLogger().Infof("Setting selected system root '%s' (%s) as default", name, arch)
+
+	if err := srm.mgr.SetDefaultSysRoot(name, arch); err != nil {
+		return err
+	}
+	if err := srm.binfmt.Register(arch); err != nil {
+		return err
+	}
+
+	sr, err := srm.mgr.GetDefaultSysroot()
+	if err != nil {
+		return err
+	}
+
+	// Setup systemd
+	sds := sysmgr_arch.NewSystemdService().SetPackageManager(srm.pkgman)
+	if err := sds.Remove(); err != nil {
+		return err
+	}
+	if err := sds.Create(sr.Arch); err != nil {
+		return err
+	}
+
+	// Activate
+	return sr.Activate()
+}
+
+// actionCreate is used to create a system root
+func (srm SysrootManager) actionCreate(ctx *cli.Context) error {
+	srm.ExitOnNonRootUID()
+	roots, err := srm.mgr.GetSysRoots()
+	if err != nil {
+		return err
+	}
+
+	isDefault := len(roots) == 0 // True only if no system roots has been created at all
+	name, arch := srm.getNameArch(ctx)
+	srm.GetLogger().Infof("Creating system root: %s (%s)", name, arch)
+	sysroot, err := srm.mgr.CreateSysRoot(name, arch)
+	if err != nil {
+		return err
+	}
+	if err := sysroot.SetDefault(isDefault); err != nil {
+		return err
+	}
+	if err := srm.pkgman.SetSysroot(sysroot).Setup(); err != nil {
+		return err
+	}
+	if isDefault {
+		srm.GetLogger().Debugf("Activating default system root")
+		if err := sysroot.Activate(); err != nil {
+			return err
+		}
+		return srm.actionSetDefault(ctx)
+	}
+
+	return nil
+}
+
+// actionListSysroots lists to the stdout all the system roots available
+func (srm SysrootManager) actionListSysroots() error {
+	roots, err := srm.mgr.GetSysRoots()
+	if err != nil {
+		return err
+	}
+	if len(roots) > 0 {
+		fmt.Printf("Found %d system roots:\n", len(roots))
+		for idx, sr := range roots {
+			d := " "
+			if sr.Default {
+				d = "*"
+			}
+			fmt.Printf("%s  %d. %s (%s)\n", d, idx+1, sr.Name, sr.Arch)
+
+		}
+	}
+	return nil
+}
+
+// actionShowDefaultPath shows the path to the default system root
+func (srm SysrootManager) actionShowDefaultPath() error {
+	sr, err := srm.mgr.GetDefaultSysroot()
+	if err != nil {
+		return err
+	}
+	fmt.Println(sr.Path)
+	return nil
+}
+
+// actionInitSysroot initialises default systemroot
+func (srm SysrootManager) actionInitSysroot() error {
+	srm.ExitOnNonRootUID()
+	sr, err := srm.mgr.GetDefaultSysroot()
+
+	if err != nil {
+		return err
+	}
+
+	if err := srm.binfmt.Register(sr.Arch); err != nil {
+		return err
+	}
+
+	if err := sysmgr_arch.NewSystemdService().SetPackageManager(srm.pkgman).Create(sr.Arch); err != nil {
+		return err
+	}
+	return sr.Activate()
+}
+
+// actionDeleteSysroot removes specified system root
+func (srm SysrootManager) actionDeleteSysroot(ctx *cli.Context) error {
+	srm.ExitOnNonRootUID()
+	name, arch := srm.getNameArch(ctx)
+	wzlib_logger.GetCurrentLogger().Infof("Deleting system root: %s (%s)", name, arch)
+	return srm.mgr.DeleteSysRoot(name, arch)
+}
+
 // Run system manager
 func (srm SysrootManager) RunSystemManager(ctx *cli.Context) error {
 	if ctx.Bool("list") {
-		roots, err := srm.mgr.GetSysRoots()
-		if err != nil {
-			return err
-		}
-		if len(roots) > 0 {
-			fmt.Printf("Found %d system roots:\n", len(roots))
-			for idx, sr := range roots {
-				d := " "
-				if sr.Default {
-					d = "*"
-				}
-				fmt.Printf("%s  %d. %s (%s)\n", d, idx+1, sr.Name, sr.Arch)
-
-			}
-		}
+		return srm.actionListSysroots()
 	} else if ctx.Bool("create") {
-		srm.ExitOnNonRootUID()
-		roots, err := srm.mgr.GetSysRoots()
-		if err != nil {
-			return err
-		}
-
-		isDefault := len(roots) == 0
-		name, arch := srm.getNameArch(ctx)
-		wzlib_logger.GetCurrentLogger().Infof("Creating system root: %s (%s)", name, arch)
-		sysroot, err := srm.mgr.CreateSysRoot(name, arch)
-		if err != nil {
-			return err
-		}
-		if err := sysroot.SetDefault(isDefault); err != nil {
-			return err
-		}
-		if err := srm.pkgman.SetSysroot(sysroot).Setup(); err != nil {
-			return err
-		}
-		if isDefault {
-			return sysroot.Activate()
-		}
+		return srm.actionCreate(ctx)
 	} else if ctx.Bool("delete") {
-		srm.ExitOnNonRootUID()
-		name, arch := srm.getNameArch(ctx)
-		wzlib_logger.GetCurrentLogger().Infof("Deleting system root: %s (%s)", name, arch)
-		return srm.mgr.DeleteSysRoot(name, arch)
+		return srm.actionDeleteSysroot(ctx)
 	} else if ctx.Bool("set") {
-		srm.ExitOnNonRootUID()
-		name, arch := srm.getNameArch(ctx)
-
-		// Detach current default
-		psr, err := srm.mgr.GetDefaultSysroot()
-		if err != nil {
-			return err
-		}
-		if psr != nil {
-			if err := psr.UmountBinds(); err != nil {
-				return err
-			}
-		}
-
-		wzlib_logger.GetCurrentLogger().Infof("Setting selected system root '%s' (%s) as default", name, arch)
-		if err := srm.mgr.SetDefaultSysRoot(name, arch); err != nil {
-			return err
-		}
-		if err := srm.binfmt.Register(arch); err != nil {
-			return err
-		}
-
-		sr, err := srm.mgr.GetDefaultSysroot()
-		if err != nil {
-			return err
-		}
-
-		// Setup systemd
-		sds := sysmgr_arch.NewSystemdService().SetPackageManager(srm.pkgman)
-		if err := sds.Remove(); err != nil {
-			return err
-		}
-		if err := sds.Create(sr.Arch); err != nil {
-			return err
-		}
-
-		// Activate
-		return sr.Activate()
+		return srm.actionSetDefault(ctx)
 	} else if ctx.Bool("path") {
-		sr, err := srm.mgr.GetDefaultSysroot()
-		if err != nil {
-			return err
-		}
-		fmt.Println(sr.Path)
+		return srm.actionShowDefaultPath()
 	} else if ctx.Bool("init") {
-		srm.ExitOnNonRootUID()
-		sr, err := srm.mgr.GetDefaultSysroot()
-
-		if err != nil {
-			return err
-		}
-
-		if err := srm.binfmt.Register(sr.Arch); err != nil {
-			return err
-		}
-
-		if err := sysmgr_arch.NewSystemdService().SetPackageManager(srm.pkgman).Create(sr.Arch); err != nil {
-			return err
-		}
-		return sr.Activate()
+		return srm.actionInitSysroot()
 	} else {
 		cli.ShowSubcommandHelpAndExit(ctx, 1)
 	}
-
 	return nil
 }
 
