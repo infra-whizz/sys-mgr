@@ -279,7 +279,29 @@ func (srm SysrootManager) actionDeleteSysroot(ctx *cli.Context) error {
 	srm.ExitOnNonRootUID()
 	name, arch := srm.getNameArch(ctx)
 	wzlib_logger.GetCurrentLogger().Infof("Deleting system root: %s (%s)", name, arch)
-	return srm.mgr.DeleteSysRoot(name, arch)
+	if err := srm.mgr.DeleteSysRoot(name, arch); err != nil {
+		return err
+	}
+	roots, err := srm.mgr.GetSysRoots()
+	if err != nil {
+		return err
+	}
+
+	// No roots, remove the systemd setup, if any
+	if len(roots) == 0 {
+		if err := srm.binfmt.Unregister(arch); err != nil {
+			return err
+		}
+		smd := sysmgr_arch.NewSystemdService()
+		if err := smd.Disable(); err != nil {
+			return err
+		}
+
+		if err := smd.Remove(); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // Run system manager
