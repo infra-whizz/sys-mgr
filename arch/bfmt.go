@@ -70,8 +70,11 @@ func NewBinFormat() *BinFormat {
 	// Supported architectures
 	bf.Architectures = []*Arch{
 		bf.Arch_x86_64,
-		bf.Arch_ARM, bf.Arch_ARM64,
-		bf.Arch_MIPS, bf.Arch_MIPS32, bf.Arch_MIPS64,
+		bf.Arch_ARM,
+		bf.Arch_ARM64,
+		bf.Arch_MIPS,
+		bf.Arch_MIPS32,
+		bf.Arch_MIPS64,
 	}
 
 	bf.bfmtMisc = "/proc/sys/fs/binfmt_misc"
