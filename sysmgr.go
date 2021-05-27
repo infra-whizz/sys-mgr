@@ -39,7 +39,9 @@ func NewSysrootManager(appname string) *SysrootManager {
 
 	srm.architectures = []string{}
 	for _, arch := range srm.binfmt.Architectures {
-		srm.architectures = append(srm.architectures, arch.Name)
+		if arch != nil {
+			srm.architectures = append(srm.architectures, arch.Name)
+		}
 	}
 
 	sort.Strings(srm.architectures)
@@ -84,7 +86,15 @@ func (srm SysrootManager) RunArchGate() error {
 			fmt.Printf("This is a helper utility and should not be directly used.\nYou are looking for '%s-sysroot' instead.\n", srm.pkgman.Name())
 			os.Exit(0)
 		}
-		dr, _ := srm.mgr.GetDefaultSysroot()
+		dr, err := srm.mgr.GetDefaultSysroot()
+
+		if err != nil {
+			return err
+		}
+
+		if dr.Arch == "" {
+			return fmt.Errorf("Sysroot has no architecture defined")
+		}
 		var args []string
 		if _, err := os.Stat("/etc/sysroot.conf"); os.IsNotExist(err) {
 			if dr == nil {
