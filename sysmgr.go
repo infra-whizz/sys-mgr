@@ -114,7 +114,9 @@ func (srm SysrootManager) RunArchGate() error {
 			args = os.Args[1:]
 		}
 
-		cmd := wzlib_subprocess.ExecCommand("/usr/bin/qemu-arm", args...)
+		// XXX: Caller is distro-specific. E.g. on Ubuntu it is "qemu-<arch>-static".
+		//      This needs to have a better setup per a distro.
+		cmd := wzlib_subprocess.ExecCommand(fmt.Sprintf("/usr/bin/qemu-%s", dr.Arch), args...)
 		cmd.Stderr = os.Stderr
 		cmd.Stdout = os.Stdout
 		cmd.Stdin = os.Stdin
