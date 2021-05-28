@@ -21,7 +21,7 @@ type ZypperPackageManager struct {
 // NewZypperPackageManager creates a zypper caller object
 func NewZypperPackageManager() *ZypperPackageManager {
 	pm := new(ZypperPackageManager)
-	pm.archFix = map[string]string{"aarch64": "armv7hl", "arm": "armv7hl"}
+	pm.archFix = map[string]string{"arm": "armv7hl"}
 	pm.env = make(map[string]string)
 	return pm
 }
@@ -45,6 +45,7 @@ func (pm *ZypperPackageManager) Name() string {
 func (pm *ZypperPackageManager) SetSysroot(sysroot *sysmgr_sr.SysRoot) PackageManager {
 	pm.sysroot = sysroot
 	pm.env["ZYPP_CONF"] = path.Join(pm.sysroot.Path, "/etc/zypp/zypp.conf")
+	pm.sysroot.GetLogger().Debug("Zypper environment: ", pm.env)
 
 	return pm
 }

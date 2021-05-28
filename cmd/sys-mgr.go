@@ -20,14 +20,14 @@ func init() {
 	sm = sysmgr.NewSysrootManager(path.Base(os.Args[0]))
 
 	// setup logger
-	if funk.Contains(os.Args, "--verbose") || funk.Contains(os.Args, "-v") {
+	if funk.Contains(os.Args, "--verbose") || funk.Contains(os.Args, "--debug") {
 		wzlib_logger.GetCurrentLogger().SetLevel(logrus.TraceLevel)
 	} else {
 		wzlib_logger.GetCurrentLogger().SetLevel(logrus.ErrorLevel)
 	}
 
 	if err := sm.RunArchGate(); err != nil {
-		wzlib_logger.GetCurrentLogger().Errorf("Error: %s", err.Error())
+		wzlib_logger.GetCurrentLogger().Errorf("Gate arch error: %s", err.Error())
 		os.Exit(1)
 	}
 }

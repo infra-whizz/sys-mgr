@@ -50,12 +50,14 @@ func (sr *SysRoot) SetArch(arch string) *SysRoot {
 
 // Init system root.
 func (sr *SysRoot) Init() (*SysRoot, error) {
-	if sr.Name == "" {
-		return nil, fmt.Errorf("Name of the sysroot was not specified while looking it up")
-	}
+	if sr.sysPath != "/" {
+		if sr.Name == "" {
+			return nil, fmt.Errorf("Name of the sysroot was not specified while looking it up")
+		}
 
-	if sr.Arch == "" {
-		return nil, fmt.Errorf("Architecture of the sysroot was not specified while looking it up")
+		if sr.Arch == "" {
+			return nil, fmt.Errorf("Architecture of the sysroot was not specified while looking it up")
+		}
 	}
 
 	// Already initialised
@@ -63,14 +65,19 @@ func (sr *SysRoot) Init() (*SysRoot, error) {
 		return sr, nil
 	}
 
-	sr.Path = path.Join(sr.sysPath, fmt.Sprintf("%s.%s", sr.Name, sr.Arch))
-	if _, err := os.Stat(sr.sysPath); os.IsNotExist(err) {
-		return nil, fmt.Errorf("No system root found at %s", sr.sysPath)
+	// Read sysroot from the host root or chrooted
+	if sr.sysPath != "/" {
+		sr.Path = path.Join(sr.sysPath, fmt.Sprintf("%s.%s", sr.Name, sr.Arch))
+		if _, err := os.Stat(sr.sysPath); os.IsNotExist(err) {
+			return nil, fmt.Errorf("No system root found at %s", sr.sysPath)
+		}
+	} else { // chrooted
+		sr.Path = sr.sysPath
 	}
 
-	sr.confPath = path.Join(sr.Path, "/etc/sysroot.conf")
+	sr.confPath = path.Clean(path.Join(sr.Path, ChildSysrootConfig))
 	if _, err := os.Stat(sr.confPath); os.IsNotExist(err) {
-		return nil, fmt.Errorf("Invalid or unknown system root. Configuration missing at %s", sr.confPath)
+		return nil, fmt.Errorf("Invalid or unknown child system root. Configuration missing at %s", sr.confPath)
 	}
 	conf := nanoconf.NewConfig(sr.confPath)
 	sr.Name = conf.Root().String("name", "")
@@ -82,7 +89,7 @@ func (sr *SysRoot) Init() (*SysRoot, error) {
 	}
 
 	if sr.Name == "" || sr.Arch == "" {
-		return nil, fmt.Errorf("Invalid or unknown system root at %s", sr.Path)
+		return nil, fmt.Errorf("Invalid configuration of a system root at %s", sr.Path)
 	}
 
 	return sr, nil
@@ -146,7 +153,7 @@ func (sr *SysRoot) Create() error {
 	}
 
 	sr.Path = path.Join(sr.sysPath, fmt.Sprintf("%s.%s", sr.Name, sr.Arch))
-	sr.confPath = path.Join(sr.Path, "/etc/sysroot.conf")
+	sr.confPath = path.Join(sr.Path, ChildSysrootConfig)
 
 	if err = sr.checkExistingSysroot(true); err != nil {
 		return err

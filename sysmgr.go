@@ -39,7 +39,9 @@ func NewSysrootManager(appname string) *SysrootManager {
 
 	srm.architectures = []string{}
 	for _, arch := range srm.binfmt.Architectures {
-		srm.architectures = append(srm.architectures, arch.Name)
+		if arch != nil {
+			srm.architectures = append(srm.architectures, arch.Name)
+		}
 	}
 
 	sort.Strings(srm.architectures)
@@ -84,32 +86,56 @@ func (srm SysrootManager) RunArchGate() error {
 			fmt.Printf("This is a helper utility and should not be directly used.\nYou are looking for '%s-sysroot' instead.\n", srm.pkgman.Name())
 			os.Exit(0)
 		}
-		dr, _ := srm.mgr.GetDefaultSysroot()
+
+		dr, err := srm.mgr.GetDefaultSysroot()
+		if err != nil {
+			return fmt.Errorf("Error getting default system root: %s", err.Error())
+		}
+
+		if dr.Arch == "" {
+			return fmt.Errorf("Sysroot has no architecture defined")
+		}
+
+		arch, err := srm.binfmt.GetArch(dr.Arch)
+		if err != nil {
+			return fmt.Errorf("Error getting architecture for the system root: %s", err.Error())
+		}
+
 		var args []string
-		if _, err := os.Stat("/etc/sysroot.conf"); os.IsNotExist(err) {
+
+		isChrooted, err := srm.mgr.IsChrooted()
+		if err != nil {
+			return err
+		}
+
+		if isChrooted {
+			args = os.Args[1:]
+		} else {
 			if dr == nil {
-				return fmt.Errorf("Sysroot was not found though")
+				return fmt.Errorf("Sysroot was not found")
 			}
 			// Call natively
 			linker, err := srm.FindDynLinker()
 			if err != nil {
-				return err
+				return fmt.Errorf("Error getting dynamic linker: %s", err.Error())
 			}
-			args = append([]string{
-				path.Join(dr.Path, linker), "--library-path",
-				fmt.Sprintf("%s:%s", path.Join(dr.Path, "/usr/lib"), path.Join(dr.Path, "/lib")),
-			}, os.Args[1:]...)
-		} else {
-			// Call chrooted
-			args = os.Args[1:]
+
+			// Lib path
+			libPath := []string{path.Join(dr.Path, "/usr/lib"), path.Join(dr.Path, "/lib")}
+			if arch.CPUBit == 0x40 {
+				libPath = append(libPath, path.Join(dr.Path, "/usr/lib64"), path.Join(dr.Path, "/lib64"))
+			}
+			args = append([]string{path.Join(dr.Path, linker), "--library-path", strings.Join(libPath, ":")}, os.Args[1:]...)
 		}
 
-		cmd := wzlib_subprocess.ExecCommand("/usr/bin/qemu-arm", args...)
+		// XXX: Caller is distro-specific. E.g. on Ubuntu it is "qemu-<arch>-static".
+		//      This needs to have a better setup per a distro.
+		cmd := wzlib_subprocess.ExecCommand(fmt.Sprintf("/usr/bin/qemu-%s", arch.Name), args...)
 		cmd.Stderr = os.Stderr
 		cmd.Stdout = os.Stdout
 		cmd.Stdin = os.Stdin
 		if err := cmd.Run(); err != nil {
-			fmt.Println("Error:", err.Error())
+			fmt.Println("Gate runtime call error:", err.Error())
 			os.Exit(1)
 		}
 
