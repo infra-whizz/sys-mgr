@@ -5,12 +5,14 @@ import (
 	"os"
 	"strings"
 
+	wzlib_logger "github.com/infra-whizz/wzlib/logger"
 	wzlib_subprocess "github.com/infra-whizz/wzlib/subprocess"
 )
 
 // BasePackageManager mixin
 type BasePackageManager struct {
 	env map[string]string
+	wzlib_logger.WzLogger
 }
 
 func (bpm *BasePackageManager) callPackageManager(name string, args ...string) error {
@@ -27,6 +29,7 @@ func (bpm *BasePackageManager) callPackageManager(name string, args ...string) e
 			}
 			cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", strings.TrimSpace(ek), ev))
 		}
+		bpm.GetLogger().Debugf("Environment set for '%s' with '%v' as follows: '%v'", name, args, cmd.Env)
 	}
 
 	return cmd.Run()

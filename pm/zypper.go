@@ -45,6 +45,7 @@ func (pm *ZypperPackageManager) Name() string {
 func (pm *ZypperPackageManager) SetSysroot(sysroot *sysmgr_sr.SysRoot) PackageManager {
 	pm.sysroot = sysroot
 	pm.env["ZYPP_CONF"] = path.Join(pm.sysroot.Path, "/etc/zypp/zypp.conf")
+	pm.sysroot.GetLogger().Debug("Zypper environment: ", pm.env)
 
 	return pm
 }
