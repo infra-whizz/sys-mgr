@@ -27,7 +27,7 @@ func init() {
 	}
 
 	if err := sm.RunArchGate(); err != nil {
-		wzlib_logger.GetCurrentLogger().Errorf("Error: %s", err.Error())
+		wzlib_logger.GetCurrentLogger().Errorf("Gate arch error: %s", err.Error())
 		os.Exit(1)
 	}
 }
