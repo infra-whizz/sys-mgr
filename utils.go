@@ -47,7 +47,7 @@ func GetCurrentPackageManager() sysmgr_pm.PackageManager {
 	case "opensuse-leap":
 		pkgman = sysmgr_pm.NewZypperPackageManager()
 	default:
-		os.Stderr.WriteString("The '%s' platform is not supported.\n")
+		os.Stderr.WriteString(fmt.Sprintf("The '%s' platform is not supported.\n", platform))
 		os.Exit(1)
 	}
 
