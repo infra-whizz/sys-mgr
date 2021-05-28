@@ -103,7 +103,7 @@ func (srm *SysrootManager) SetDefaultSysRoot(name string, arch string) error {
 func (srm *SysrootManager) GetSysRoots() ([]*SysRoot, error) {
 	data, err := ioutil.ReadDir(srm.sysroots)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Unable to read directory '%s': %s", srm.sysroots, err.Error())
 	}
 
 	roots := []*SysRoot{}
