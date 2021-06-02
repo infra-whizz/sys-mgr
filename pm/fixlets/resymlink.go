@@ -58,10 +58,13 @@ func (rsl *ReSymlink) callback(pathname string, dirEntry *godirwalk.Dirent) erro
 	}
 
 	if dirEntry.IsSymlink() {
-		brokenPtr, _ := os.Readlink(pathname)
-		ptrDir := path.Dir(pathname)
+		brokenPtr, err := os.Readlink(pathname)
+		if err != nil {
+			return err
+		}
 
 		if strings.HasPrefix(brokenPtr, "/") {
+			ptrDir := path.Dir(pathname)
 			if err := os.Chdir(ptrDir); err != nil {
 				return fmt.Errorf("Cannot change directory to %s: %s", ptrDir, err.Error())
 			}
