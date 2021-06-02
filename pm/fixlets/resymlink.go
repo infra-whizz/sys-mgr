@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 
 	sysmgr_sr "github.com/infra-whizz/sys-mgr/sr"
@@ -52,7 +53,7 @@ func (rsl *ReSymlink) callback(pathname string, dirEntry *godirwalk.Dirent) erro
 	for _, skipTopDir := range rsl.skipTopDirs {
 		pref := path.Join(rsl.sysroot.Path, skipTopDir)
 		if strings.HasPrefix(pathname, pref) {
-			return nil
+			return filepath.SkipDir
 		}
 	}
 
