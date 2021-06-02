@@ -53,6 +53,11 @@ func NewSysrootManager(appname string) *SysrootManager {
 	return srm
 }
 
+// GetSysrootManager tracking
+func (srm *SysrootManager) GetSysrootManager() *sysmgr_sr.SysrootManager {
+	return srm.mgr
+}
+
 // AppName returns a name of the binary, as it should have multiple ones
 func (srm SysrootManager) AppName() string {
 	return srm.appname

@@ -7,6 +7,7 @@ import (
 	"path"
 	"strings"
 
+	sysmgr_fixlets "github.com/infra-whizz/sys-mgr/pm/fixlets"
 	sysmgr_sr "github.com/infra-whizz/sys-mgr/sr"
 )
 
@@ -33,7 +34,12 @@ func (pm *ZypperPackageManager) Call(args ...string) error {
 	}
 
 	args = append([]string{"--root", pm.sysroot.Path}, args...)
-	return pm.callPackageManager(pm.Name(), args...)
+	if err := pm.callPackageManager(pm.Name(), args...); err != nil {
+		return err
+	}
+
+	// Run symlink fixlet after each Zypper call
+	return sysmgr_fixlets.NewReSymlink(pm.sysroot).Relink()
 }
 
 // Name of the package manager
