@@ -78,7 +78,11 @@ func (srm *SysrootManager) DeleteSysRoot(name string, arch string) error {
 		return err
 	}
 
-	sysroot := NewSysRoot(srm.sysroots).SetName(name).SetArch(arch)
+	sysroot, err := NewSysRoot(srm.sysroots).SetName(name).SetArch(arch).Init()
+	if err != nil {
+		return err
+	}
+
 	if err := srm.CheckWithinSysroot(sysroot); err != nil {
 		return err
 	}
