@@ -130,6 +130,15 @@ func (bf BinFormat) Unregister(arch string) error {
 
 // Register architecture. This previously un-registers possible target.
 func (bf BinFormat) Register(arch string) error {
+	uname := NewUname()
+	if err := uname.Init(); err != nil {
+		return err
+	}
+
+	if uname.Machine == arch {
+		return nil
+	}
+
 	if err := bf.Unregister(arch); err != nil {
 		return err
 	}
