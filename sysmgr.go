@@ -313,6 +313,7 @@ func (srm SysrootManager) actionDeleteSysroot(ctx *cli.Context) error {
 	if err := srm.mgr.DeleteSysRoot(name, arch); err != nil {
 		return err
 	}
+
 	roots, err := srm.mgr.GetSysRoots()
 	if err != nil {
 		return err
