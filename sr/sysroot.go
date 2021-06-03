@@ -38,13 +38,17 @@ func NewSysRoot(syspath string) *SysRoot {
 
 // SetName alias
 func (sr *SysRoot) SetName(name string) *SysRoot {
-	sr.Name = name
+	if sr.Name == "" {
+		sr.Name = name
+	}
 	return sr
 }
 
 // SetArch alias
 func (sr *SysRoot) SetArch(arch string) *SysRoot {
-	sr.Arch = arch
+	if sr.Arch == "" {
+		sr.Arch = arch
+	}
 	return sr
 }
 
@@ -80,8 +84,9 @@ func (sr *SysRoot) Init() (*SysRoot, error) {
 		return nil, fmt.Errorf("Invalid or unknown child system root. Configuration missing at %s", sr.confPath)
 	}
 	conf := nanoconf.NewConfig(sr.confPath)
-	sr.Name = conf.Root().String("name", "")
-	sr.Arch = conf.Root().String("arch", "")
+
+	sr.SetName(conf.Root().String("name", ""))
+	sr.SetArch(conf.Root().String("arch", ""))
 
 	isDefault := (*conf.Root().Raw())["default"]
 	if isDefault != nil {
