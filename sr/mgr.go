@@ -57,6 +57,21 @@ func (srm *SysrootManager) CreateSysRoot(name string, arch string) (*SysRoot, er
 	return sysroot, nil
 }
 
+// CheckWithinSysroot returns an error, if current working directory is within sysroot.
+// Useful to prevent destructive operations, such as sysroot removal, while still working in it.
+func (srm SysrootManager) CheckWithinSysroot(sysroot *SysRoot) error {
+	here, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("Unable to obtain current working directory: %s", err.Error())
+	}
+
+	if strings.HasPrefix(here, sysroot.Path) {
+		return fmt.Errorf("This operation is not permitted while still inside the '%s' directory", sysroot.Path)
+	}
+
+	return nil
+}
+
 // DeleteSysroot deletes the entire system root
 func (srm *SysrootManager) DeleteSysRoot(name string, arch string) error {
 	if err := srm.checkArch(arch); err != nil {
@@ -64,6 +79,10 @@ func (srm *SysrootManager) DeleteSysRoot(name string, arch string) error {
 	}
 
 	sysroot := NewSysRoot(srm.sysroots).SetName(name).SetArch(arch)
+	if err := srm.CheckWithinSysroot(sysroot); err != nil {
+		return err
+	}
+
 	if err := sysroot.UmountBinds(); err != nil {
 		return err
 	}
