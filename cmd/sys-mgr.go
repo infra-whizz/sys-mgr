@@ -14,7 +14,7 @@ import (
 )
 
 var sm *sysmgr.SysrootManager
-var VERSION string = "1.0"
+var VERSION string = "1.1"
 
 func init() {
 	sm = sysmgr.NewSysrootManager(path.Base(os.Args[0]))
