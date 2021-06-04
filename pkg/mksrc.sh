@@ -3,7 +3,7 @@
 # Configuration
 P_NAME="sysroot-manager"
 P_APP="cmd/sys-mgr.go"
-P_SRC_DIRS=("arch" "pm" "sr" "cmd")
+P_SRC_DIRS=("arch" "pm" "pm/fixlets" "sr" "cmd")
 P_DOC_DIRS=("etc")
 P_FILES=("LICENSE" "README.md" "go.mod" "go.sum" "utils.go" "sysmgr.go")
 P_CMD=("Makefile")
