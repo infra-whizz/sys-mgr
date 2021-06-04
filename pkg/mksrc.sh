@@ -85,6 +85,12 @@ function copy_packaged_sources {
 
 function copy_vendor_sources {
     # copy vendor
+    echo "Vendoring deps..."
+    pushd ..
+    go mod tidy
+    go mod vendor
+    popd
+
     v_dir="../vendor"
     dir_exists "$v_dir" "Please run 'go mod vendor' to make it."
     echo "Copying vendor libraries..."
@@ -123,6 +129,7 @@ function cleanup {
     if [ -d vendor ]; then
 	echo "Cleaning up vendor..."
 	rm -rf vendor
+	rm -rf ../vendor
     fi
 }
 
