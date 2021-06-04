@@ -13,7 +13,7 @@
 # published by the Open Source Initiative.
 
 Name:           sysroot-manager
-Version:        0.1
+Version:        1.1
 Release:        0
 Summary:        System root manager
 License:        MIT
