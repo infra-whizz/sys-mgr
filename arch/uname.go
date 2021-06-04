@@ -21,17 +21,24 @@ func NewUname() *Uname {
 	return new(Uname)
 }
 
-// a2s converts an array of int to a string for syscalls
-func (un *Uname) a2s(data [65]int8) string {
+// a2s converts C string to a Go string. Compatible with 32 and 64 bit.
+func (un *Uname) a2s(data interface{}) string {
 	var buf [65]byte
-	for i, b := range data {
-		buf[i] = byte(b)
+	switch data := data.(type) {
+	case [65]uint8:
+		for i, b := range data {
+			buf[i] = byte(b)
+		}
+	case [65]int8:
+		for i, b := range data {
+			buf[i] = byte(b)
+		}
 	}
-	str := string(buf[:])
-	if i := strings.Index(str, "\x00"); i != -1 {
-		str = str[:i]
+	val := string(buf[:])
+	if i := strings.Index(val, "\x00"); i != -1 {
+		val = val[:i]
 	}
-	return str
+	return val
 }
 
 // Init Uname
