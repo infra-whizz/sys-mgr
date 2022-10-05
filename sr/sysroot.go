@@ -88,7 +88,7 @@ func (sr *SysRoot) Init() (*SysRoot, error) {
 	sr.SetName(conf.Root().String("name", ""))
 	sr.SetArch(conf.Root().String("arch", ""))
 
-	isDefault := (*conf.Root().Raw())["default"]
+	isDefault := conf.Root().Raw()["default"]
 	if isDefault != nil {
 		sr.Default = isDefault.(bool)
 	}
