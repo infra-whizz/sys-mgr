@@ -42,8 +42,7 @@ func GetCurrentPackageManager() sysmgr_pm.PackageManager {
 	var pkgman sysmgr_pm.PackageManager
 	switch platform {
 	case "ubuntu":
-		os.Stderr.WriteString("This is Ubuntu platform. Currently 'apt' is not supported.\n")
-		os.Exit(1)
+		pkgman = sysmgr_pm.NewAptPackageManager()
 	case "opensuse-leap":
 		pkgman = sysmgr_pm.NewZypperPackageManager()
 	default:
