@@ -10,6 +10,7 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/elastic/go-sysinfo"
 	wzlib_logger "github.com/infra-whizz/wzlib/logger"
 	"github.com/isbm/go-nanoconf"
 	"github.com/isbm/go-shutil"
@@ -150,10 +151,30 @@ func (sr *SysRoot) replicate() error {
 	return nil
 }
 
+// GetCurrentPlatform returns a current platform class
+// XXX: Needs to be moved to the utils, but that requires a major refactoring.
+func (sr *SysRoot) GetCurrentPlatform() string {
+	info, err := sysinfo.Host()
+	if err != nil {
+		panic(err)
+	}
+
+	return info.Info().OS.Platform
+}
+
 // Create a system root
 func (sr *SysRoot) Create() error {
 	var err error
-	if sr.qemuPath, err = exec.LookPath(fmt.Sprintf("qemu-%s", sr.Arch)); err != nil {
+	var qemuPattern string
+
+	switch sr.GetCurrentPlatform() {
+	case "ubuntu":
+		qemuPattern = "qemu-%s-static"
+	default:
+		qemuPattern = "qemu-%s"
+	}
+
+	if sr.qemuPath, err = exec.LookPath(fmt.Sprintf(qemuPattern, sr.Arch)); err != nil {
 		return err
 	}
 

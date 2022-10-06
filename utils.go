@@ -7,9 +7,12 @@ import (
 	"strconv"
 
 	"github.com/elastic/go-sysinfo"
+	"github.com/elastic/go-sysinfo/types"
 	sysmgr_pm "github.com/infra-whizz/sys-mgr/pm"
 	"github.com/thoas/go-funk"
 )
+
+var _currentHostInfo types.Host
 
 func CheckUser(uid int, gid int) error {
 	var err error
@@ -32,13 +35,21 @@ func CheckUser(uid int, gid int) error {
 	return nil
 }
 
-func GetCurrentPackageManager() sysmgr_pm.PackageManager {
-	host, err := sysinfo.Host()
-	if err != nil {
-		panic(err)
+// GetCurrentPlatform returns a current platform class
+func GetCurrentPlatform() string {
+	var err error
+	if _currentHostInfo == nil {
+		_currentHostInfo, err = sysinfo.Host()
+		if err != nil {
+			panic(err)
+		}
 	}
 
-	platform := host.Info().OS.Platform
+	return _currentHostInfo.Info().OS.Platform
+}
+
+func GetCurrentPackageManager() sysmgr_pm.PackageManager {
+	platform := GetCurrentPlatform()
 	var pkgman sysmgr_pm.PackageManager
 	switch platform {
 	case "ubuntu":
