@@ -41,6 +41,27 @@ func main() {
 
 	app.Commands = []*cli.Command{
 		{
+			CustomHelpTemplate: `NAME:
+{{$v := offset .HelpName 6}}{{wrap .HelpName 3}}{{if .Usage}} - {{wrap .Usage $v}}{{end}}
+
+USAGE:
+	{{if .UsageText}}{{wrap .UsageText 3}}{{else}}{{.HelpName}}{{if .VisibleFlags}} [command options]{{end}} {{if .ArgsUsage}}{{.ArgsUsage}}{{else}}[arguments...]{{end}}{{end}}{{if .Category}}
+
+CATEGORY:
+	{{.Category}}{{end}}{{if .Description}}
+
+DESCRIPTION:
+	{{wrap .Description 3}}{{end}}{{if .VisibleFlagCategories}}
+
+OPTIONS:{{range .VisibleFlagCategories}}
+	{{if .Name}}{{.Name}}
+	{{end}}{{range .Flags}}{{.}}
+	{{end}}{{end}}{{else}}{{if .VisibleFlags}}
+
+OPTIONS:
+	{{range .VisibleFlags}}{{.}}{{end}}{{end}}{{end}}
+`,
+
 			Name:   "sysroot",
 			Usage:  "Manage sysroot",
 			Action: sm.RunSystemManager,
