@@ -21,3 +21,7 @@ It will create a sysroot labeled `my_sysroot` for ARM architecture and install t
 ## Basic Complaints
 
 You can discuss, write an issue and post your pull request that fixes issues you've found. It is a software, everything is doable.
+
+## Packaging
+
+On Ubuntu requires `qemu-user-static` and `binfmt-support`.
