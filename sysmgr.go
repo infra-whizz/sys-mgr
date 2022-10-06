@@ -297,9 +297,12 @@ func (srm SysrootManager) actionInitSysroot() error {
 		return err
 	}
 
-	if err := srm.binfmt.Register(sr.Arch); err != nil {
-		return err
-	}
+	/*
+		// Don't do that for now, it might render the system unusable at this point. :-)
+		if err := srm.binfmt.Register(sr.Arch); err != nil {
+			return err
+		}
+	*/
 
 	if err := sysmgr_arch.NewSystemdService().SetPackageManager(srm.pkgman).Create(sr.Arch); err != nil {
 		return err
