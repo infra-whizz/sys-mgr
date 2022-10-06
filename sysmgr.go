@@ -272,6 +272,8 @@ func (srm SysrootManager) actionListSysroots() error {
 			fmt.Printf("%s  %d. %s (%s)\n", d, idx+1, sr.Name, sr.Arch)
 
 		}
+	} else {
+		srm.GetLogger().Errorln("No system roots configured yet")
 	}
 	return nil
 }
