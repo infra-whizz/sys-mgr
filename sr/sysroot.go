@@ -27,6 +27,8 @@ type SysRoot struct {
 	sysPath  string
 	qemuPath string
 
+	provisioner SysrootProvisioner
+
 	wzlib_logger.WzLogger
 }
 
@@ -96,6 +98,17 @@ func (sr *SysRoot) Init() (*SysRoot, error) {
 
 	if sr.Name == "" || sr.Arch == "" {
 		return nil, fmt.Errorf("Invalid configuration of a system root at %s", sr.Path)
+	}
+
+	// Initialise provisioner
+	p := sr.GetCurrentPlatform()
+	switch p {
+	case "ubuntu", "debian":
+		sr.provisioner = NewDebianSysrootProvisioner(sr.Name, sr.Arch, sr.sysPath)
+	case "opensuse-leap":
+		sr.provisioner = NewZypperSysrootProvisioner(sr.Name, sr.Arch, sr.sysPath)
+	default:
+		return nil, fmt.Errorf("Unable to initialise provisioner for unsupported platform: %s", p)
 	}
 
 	return sr, nil
@@ -283,10 +296,9 @@ func (sr *SysRoot) SetDefault(isDefault bool) error {
 
 // Activate default sysroot (mount runtime directories)
 func (sr *SysRoot) Activate() error {
-	for _, src := range []string{"/proc", "/sys", "/dev", "/run"} {
-		if err := syscall.Mount(src, path.Join(sr.Path, src), "", syscall.MS_BIND, ""); err != nil {
-			return err
-		}
+	if sr.provisioner == nil {
+		return fmt.Errorf("Sysroot was not properly initialised")
 	}
-	return nil
+
+	return sr.provisioner.Activate()
 }
