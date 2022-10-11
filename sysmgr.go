@@ -239,12 +239,20 @@ func (srm SysrootManager) actionCreate(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
+	srm.GetLogger().Debugf("Sysroot %s has been created", sysroot.Name)
+
 	if err := sysroot.SetDefault(isDefault); err != nil {
 		return err
 	}
+
+	srm.GetLogger().Debugf("Sysroot %s is default: %s", isDefault)
+
 	if err := srm.pkgman.SetSysroot(sysroot).Setup(); err != nil {
 		return err
 	}
+
+	srm.GetLogger().Debugf("Sysroot %s setup done", sysroot.Name)
+
 	if isDefault {
 		srm.GetLogger().Debugf("Activating default system root")
 		if err := sysroot.Activate(); err != nil {
