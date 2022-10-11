@@ -10,6 +10,7 @@ func NewZypperSysrootProvisioner(name, arch, root string) *ZypperSysrootProvisio
 	zsp.SetArch(arch)
 	zsp.SetName(name)
 	zsp.SetSysPath(root)
+	zsp.ref = zsp
 
 	return zsp
 }
@@ -24,4 +25,12 @@ func (zsp *ZypperSysrootProvisioner) onPopulate() error {
 
 func (zsp *ZypperSysrootProvisioner) afterPopulate() error {
 	return nil
+}
+
+func (dsp *ZypperSysrootProvisioner) getQemuPath() string {
+	return ""
+}
+
+func (dsp *ZypperSysrootProvisioner) getSysPath() string {
+	return dsp.sysPath
 }

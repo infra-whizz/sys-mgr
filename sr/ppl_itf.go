@@ -12,9 +12,12 @@ type SysrootProvisioner interface {
 	SetArch(a string)
 	SetName(n string)
 	SetSysPath(p string) // Path of the root
+	GetConfigPath() string
 
 	// Internal hooks, should be private and used only in implementation.
 	beforePopulate() error // Called before population
 	onPopulate() error     // Population implenetation
 	afterPopulate() error  // Called after populate is finished
+	getQemuPath() string   // Get static QEMU path
+	getSysPath() string    // Get sysroot path
 }

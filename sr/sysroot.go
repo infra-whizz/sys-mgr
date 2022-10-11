@@ -4,16 +4,13 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path"
 	"strconv"
-	"strings"
 	"syscall"
 
 	"github.com/elastic/go-sysinfo"
 	wzlib_logger "github.com/infra-whizz/wzlib/logger"
 	"github.com/isbm/go-nanoconf"
-	"github.com/isbm/go-shutil"
 	"golang.org/x/sys/unix"
 )
 
@@ -100,17 +97,6 @@ func (sr *SysRoot) Init() (*SysRoot, error) {
 		return nil, fmt.Errorf("Invalid configuration of a system root at %s", sr.Path)
 	}
 
-	// Initialise provisioner
-	p := sr.GetCurrentPlatform()
-	switch p {
-	case "ubuntu", "debian":
-		sr.provisioner = NewDebianSysrootProvisioner(sr.Name, sr.Arch, sr.sysPath)
-	case "opensuse-leap":
-		sr.provisioner = NewZypperSysrootProvisioner(sr.Name, sr.Arch, sr.sysPath)
-	default:
-		return nil, fmt.Errorf("Unable to initialise provisioner for unsupported platform: %s", p)
-	}
-
 	return sr, nil
 }
 
@@ -130,40 +116,6 @@ func (sr *SysRoot) checkExistingSysroot(checkExists bool) error {
 	return nil
 }
 
-// replicate self
-func (sr *SysRoot) replicate() error {
-	selfPath, err := os.Executable()
-	if err != nil {
-		return err
-	}
-
-	for _, bin := range []string{selfPath, sr.qemuPath} {
-		sr.GetLogger().Debugf("Preparing %s", bin)
-
-		// Setup target dir
-		target := path.Join(sr.Path, path.Dir(bin))
-		if _, err = os.Stat(target); os.IsNotExist(err) {
-			sr.GetLogger().Debugf("Creating directory %s", target)
-			if err = os.MkdirAll(target, 0755); err != nil {
-				return err
-			}
-		}
-
-		// Copy required utility
-		target = path.Join(target, path.Base(bin))
-		sr.GetLogger().Debugf("Copying %s to %s", bin, target)
-		if err = shutil.CopyFile(bin, target, false); err != nil {
-			return err
-		}
-		sr.GetLogger().Debugf("Setting %s as 0755", target)
-		if err = syscall.Chmod(target, 0755); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
 // GetCurrentPlatform returns a current platform class
 // XXX: Needs to be moved to the utils, but that requires a major refactoring.
 func (sr *SysRoot) GetCurrentPlatform() string {
@@ -177,62 +129,18 @@ func (sr *SysRoot) GetCurrentPlatform() string {
 
 // Create a system root
 func (sr *SysRoot) Create() error {
-	var err error
-	var qemuPattern string
-
-	switch sr.GetCurrentPlatform() {
-	case "ubuntu":
-		qemuPattern = "qemu-%s-static"
+	// Initialise provisioner
+	p := sr.GetCurrentPlatform()
+	switch p {
+	case "ubuntu", "debian":
+		sr.provisioner = NewDebianSysrootProvisioner(sr.Name, sr.Arch, sr.sysPath)
+	case "opensuse-leap":
+		sr.provisioner = NewZypperSysrootProvisioner(sr.Name, sr.Arch, sr.sysPath)
 	default:
-		qemuPattern = "qemu-%s"
+		return fmt.Errorf("Unable to initialise provisioner for unsupported platform: %s", p)
 	}
 
-	if sr.qemuPath, err = exec.LookPath(fmt.Sprintf(qemuPattern, sr.Arch)); err != nil {
-		return err
-	}
-
-	sr.Path = path.Join(sr.sysPath, fmt.Sprintf("%s.%s", sr.Name, sr.Arch))
-	sr.confPath = path.Join(sr.Path, ChildSysrootConfig)
-
-	if err = sr.checkExistingSysroot(true); err != nil {
-		return err
-	}
-
-	for _, d := range []string{"/etc", "/proc", "/dev", "/sys", "/run", "/tmp"} {
-		if err = os.MkdirAll(path.Join(sr.Path, d), 0755); err != nil {
-			return err
-		}
-	}
-
-	// Create sysroot configuration
-	if err = ioutil.WriteFile(sr.confPath, []byte(fmt.Sprintf("name: %s\narch: %s\ndefault: false\n", sr.Name, sr.Arch)), 0644); err != nil {
-		return err
-	}
-
-	// Add basic skeleton for package manager should work
-	files, err := ioutil.ReadDir("/etc")
-	if err != nil {
-		return err
-	}
-
-	// Copy *-relese files
-	for _, f := range files {
-		if strings.HasSuffix(f.Name(), "-release") {
-			srcpath := path.Join("/etc", f.Name())
-			tgtpath := path.Join(sr.Path, "etc", f.Name())
-			sr.GetLogger().Debugf("Copying %s to %s", srcpath, tgtpath)
-
-			data, err := ioutil.ReadFile(srcpath)
-			if err != nil {
-				return err
-			}
-			if err := ioutil.WriteFile(tgtpath, data, 0644); err != nil {
-				return err
-			}
-		}
-	}
-
-	return sr.replicate()
+	return sr.provisioner.Populate()
 }
 
 // UmountBinds removes proc, dev, sys and run
@@ -290,7 +198,7 @@ func (sr *SysRoot) SetDefault(isDefault bool) error {
 		return err
 	}
 
-	return ioutil.WriteFile(sr.confPath, []byte(fmt.Sprintf("name: %s\narch: %s\ndefault: %s\n",
+	return ioutil.WriteFile(sr.provisioner.GetConfigPath(), []byte(fmt.Sprintf("name: %s\narch: %s\ndefault: %s\n",
 		sr.Name, sr.Arch, strconv.FormatBool(isDefault))), 0644)
 }
 
