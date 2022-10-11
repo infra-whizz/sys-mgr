@@ -4,8 +4,10 @@ go 1.15
 
 require (
 	github.com/antonfisher/nested-logrus-formatter v1.3.1 // indirect
+	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/elastic/go-sysinfo v1.8.1
 	github.com/elastic/go-windows v1.0.1 // indirect
+	github.com/google/uuid v1.3.0 // indirect
 	github.com/infra-whizz/wzlib v0.0.0-20210306212611-2af49aea1704
 	github.com/isbm/go-nanoconf v0.0.0-20210917204429-663038ee6e05
 	github.com/isbm/go-shutil v0.0.0-20200707163617-60e3684d72ba
@@ -16,8 +18,8 @@ require (
 	github.com/shurcooL/sanitized_anchor_name v1.0.0 // indirect
 	github.com/sirupsen/logrus v1.9.0
 	github.com/thoas/go-funk v0.9.2
-	github.com/urfave/cli/v2 v2.17.1
-	golang.org/x/sys v0.0.0-20221006211917-84dc82d7e875
+	github.com/urfave/cli/v2 v2.19.2
+	golang.org/x/sys v0.0.0-20221010170243-090e33056c14
 	golang.org/x/xerrors v0.0.0-20191204190536-9bdfabe68543 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	howett.net/plist v1.0.0 // indirect
