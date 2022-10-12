@@ -34,3 +34,7 @@ func (dsp *ZypperSysrootProvisioner) getQemuPath() string {
 func (dsp *ZypperSysrootProvisioner) getSysPath() string {
 	return dsp.sysPath
 }
+
+func (dsp *ZypperSysrootProvisioner) GetArch() string {
+	return ""
+}

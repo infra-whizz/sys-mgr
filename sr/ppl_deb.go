@@ -3,7 +3,9 @@ package sysmgr_sr
 import (
 	"fmt"
 	"io/ioutil"
+	"os"
 	"os/exec"
+	"path"
 	"sort"
 	"strings"
 
@@ -21,6 +23,7 @@ type repodata struct {
 
 type DebianSysrootProvisioner struct {
 	BaseSysrootProvisioner
+	rd *repodata
 }
 
 func NewDebianSysrootProvisioner(name, arch, root string) *DebianSysrootProvisioner {
@@ -84,10 +87,8 @@ func (dsp *DebianSysrootProvisioner) getRepoData() (*repodata, error) {
 			continue
 		}
 
-		if r.url == "" {
-			if strings.Contains(line, "main") {
-				r.url = tkn[1]
-			}
+		if r.url == "" && strings.Contains(line, "main") {
+			r.url = tkn[1]
 		}
 
 		for _, cmpt := range tkn[3:] {
@@ -95,7 +96,7 @@ func (dsp *DebianSysrootProvisioner) getRepoData() (*repodata, error) {
 		}
 	}
 
-	// Set to array
+	// Turn sets to arrays
 	for k := range components {
 		r.components = append(r.components, k)
 	}
@@ -104,33 +105,72 @@ func (dsp *DebianSysrootProvisioner) getRepoData() (*repodata, error) {
 	return r, nil
 }
 
+func (dsp *DebianSysrootProvisioner) GetArch() string {
+	archfix := map[string]string{
+		"x86_64": "amd64",
+		"i586":   "i386",
+	}
+	arch, ex := archfix[dsp.arch]
+	if !ex {
+		arch = dsp.arch
+	}
+
+	return arch
+}
+
 // Populate sysroot according to the current package manager specifics
 func (dsp *DebianSysrootProvisioner) onPopulate() error {
-	repo, err := dsp.getRepoData()
+	var err error
+	dsp.rd, err = dsp.getRepoData()
 	if err != nil {
 		return err
 	}
 
-	if err = sysmgr_lib.LoggedExec("debootstrap", "--arch", "i386", "--no-check-gpg", "--variant=minbase",
-		fmt.Sprintf("--components=%s", strings.Join(repo.components, ",")), repo.codename, dsp.sysrootPath, repo.url); err != nil {
+	if err = sysmgr_lib.LoggedExec("debootstrap", "--arch", dsp.GetArch(), "--no-check-gpg", "--variant=minbase",
+		fmt.Sprintf("--components=%s", strings.Join(dsp.rd.components, ",")), dsp.rd.codename, dsp.sysrootPath, dsp.rd.url); err != nil {
 		return err
 	}
 
-	return sysmgr_lib.LoggedExec("chroot", dsp.sysrootPath, "apt", "--fix-broken", "install")
+	return sysmgr_lib.LoggedExec("chroot", dsp.sysrootPath, "apt", "--fix-broken", "install") // Normally not needed, but mostly who knows? :)
 }
 
 func (dsp *DebianSysrootProvisioner) afterPopulate() error {
-	/*
-		for _, d := range []string{"/etc", "/proc", "/dev", "/sys", "/run", "/tmp"} {
-			if err := os.MkdirAll(path.Join(dsp.sysrootPath, d), 0755); err != nil {
-				return err
-			}
+	for _, d := range []string{"/etc", "/proc", "/dev", "/sys", "/run", "/tmp"} {
+		tp := path.Join(dsp.sysrootPath, d)
+		if wzlib_utils.FileExists(tp) {
+			continue
 		}
-	*/
+
+		if err := os.MkdirAll(tp, 0755); err != nil {
+			return err
+		}
+	}
 
 	// Create sysroot configuration
 	if err := ioutil.WriteFile(dsp.confPath, []byte(fmt.Sprintf("name: %s\narch: %s\ndefault: false\n", dsp.name, dsp.arch)), 0644); err != nil {
 		return err
 	}
+
+	// Add to sources.list if anything
+	f, err := os.OpenFile(path.Join(dsp.sysrootPath, "etc", "apt", "sources.list"), os.O_APPEND|os.O_WRONLY, 0644)
+	if err != nil {
+		return err
+	}
+	for _, section := range []string{"updates", "backports", "security"} {
+		if _, err := f.WriteString(fmt.Sprintf("deb %s %s-%s %s\n", dsp.rd.url, dsp.rd.codename, section, strings.Join(dsp.rd.components, " "))); err != nil {
+			return err
+		}
+	}
+	f.Close()
+
+	// Upgrade everything
+	if err := sysmgr_lib.LoggedExec("chroot", dsp.sysrootPath, "apt-get", "update"); err != nil {
+		return err
+	}
+
+	if err := sysmgr_lib.LoggedExec("chroot", dsp.sysrootPath, "apt-get", "upgrade", "--yes"); err != nil {
+		return err
+	}
+
 	return nil
 }

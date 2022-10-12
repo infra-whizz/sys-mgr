@@ -52,12 +52,12 @@ func GetCurrentPackageManager() sysmgr_pm.PackageManager {
 	platform := GetCurrentPlatform()
 	var pkgman sysmgr_pm.PackageManager
 	switch platform {
-	case "ubuntu":
+	case "ubuntu", "debian":
 		pkgman = sysmgr_pm.NewAptPackageManager()
 	case "opensuse-leap":
 		pkgman = sysmgr_pm.NewZypperPackageManager()
 	default:
-		os.Stderr.WriteString(fmt.Sprintf("The '%s' platform is not supported.\n", platform))
+		os.Stderr.WriteString(fmt.Sprintf("The '%s' platform is not supported. :-(\n", platform))
 		os.Exit(1)
 	}
 
