@@ -8,7 +8,9 @@ import (
 	"strings"
 
 	sysmgr "github.com/infra-whizz/sys-mgr"
+	sysmgr_lib "github.com/infra-whizz/sys-mgr/lib"
 	wzlib_logger "github.com/infra-whizz/wzlib/logger"
+
 	"github.com/sirupsen/logrus"
 	"github.com/thoas/go-funk"
 	"github.com/urfave/cli/v2"
@@ -165,7 +167,7 @@ COPYRIGHT:{{template "copyrightTemplate" .}}{{end}}
    `
 
 	var err error
-	if len(os.Args) == 1 || sysmgr.Any(os.Args, "sysroot", "-h", "--help") {
+	if len(os.Args) == 1 || sysmgr_lib.Any(os.Args, "sysroot", "-h", "--help") {
 		err = app.Run(os.Args)
 	} else {
 		err = sm.RunPackageManager()

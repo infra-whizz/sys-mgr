@@ -1,18 +1,24 @@
-package sysmgr
+package sysmgr_lib
 
 import (
 	"fmt"
-	"os"
 	"os/user"
 	"strconv"
 
 	"github.com/elastic/go-sysinfo"
 	"github.com/elastic/go-sysinfo/types"
-	sysmgr_pm "github.com/infra-whizz/sys-mgr/pm"
 	"github.com/thoas/go-funk"
 )
 
-var _currentHostInfo types.Host
+// Any of the occurrences
+func Any(in interface{}, args ...interface{}) bool {
+	for _, arg := range args {
+		if funk.Contains(in, arg) {
+			return true
+		}
+	}
+	return false
+}
 
 func CheckUser(uid int, gid int) error {
 	var err error
@@ -35,6 +41,8 @@ func CheckUser(uid int, gid int) error {
 	return nil
 }
 
+var _currentHostInfo types.Host
+
 // GetCurrentPlatform returns a current platform class
 func GetCurrentPlatform() string {
 	var err error
@@ -46,30 +54,4 @@ func GetCurrentPlatform() string {
 	}
 
 	return _currentHostInfo.Info().OS.Platform
-}
-
-func GetCurrentPackageManager() sysmgr_pm.PackageManager {
-	platform := GetCurrentPlatform()
-	var pkgman sysmgr_pm.PackageManager
-	switch platform {
-	case "ubuntu", "debian":
-		pkgman = sysmgr_pm.NewAptPackageManager()
-	case "opensuse-leap":
-		pkgman = sysmgr_pm.NewZypperPackageManager()
-	default:
-		os.Stderr.WriteString(fmt.Sprintf("The '%s' platform is not supported. :-(\n", platform))
-		os.Exit(1)
-	}
-
-	return pkgman
-}
-
-// Any of the occurrences
-func Any(in interface{}, args ...interface{}) bool {
-	for _, arg := range args {
-		if funk.Contains(in, arg) {
-			return true
-		}
-	}
-	return false
 }

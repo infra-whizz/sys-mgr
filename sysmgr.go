@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	sysmgr_arch "github.com/infra-whizz/sys-mgr/arch"
+	sysmgr_lib "github.com/infra-whizz/sys-mgr/lib"
 	sysmgr_pm "github.com/infra-whizz/sys-mgr/pm"
 	sysmgr_sr "github.com/infra-whizz/sys-mgr/sr"
 	wzlib_logger "github.com/infra-whizz/wzlib/logger"
@@ -33,7 +34,7 @@ type SysrootManager struct {
 // NewSysrootManager constructor
 func NewSysrootManager(appname string) *SysrootManager {
 	srm := new(SysrootManager)
-	srm.pkgman = GetCurrentPackageManager()
+	srm.pkgman = sysmgr_pm.GetCurrentPackageManager()
 	srm.binfmt = sysmgr_arch.NewBinFormat()
 	srm.appname = appname
 
@@ -76,7 +77,7 @@ func (srm SysrootManager) Architectures() []string {
 // ExitOnNonRootUID will terminate program immediately if caller is not UID root.
 func (srm SysrootManager) ExitOnNonRootUID() {
 	if !funk.Contains(os.Args, "-h") && !funk.Contains(os.Args, "--help") {
-		if err := CheckUser(0, 0); err != nil {
+		if err := sysmgr_lib.CheckUser(0, 0); err != nil {
 			wzlib_logger.GetCurrentLogger().Error("Root privileges are required to run this command.")
 			os.Exit(1)
 		}
