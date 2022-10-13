@@ -32,17 +32,6 @@ func (bsp *BaseSysrootProvisioner) SetSysrootPath(p string) {
 	bsp.sysrootPath = p
 }
 
-func (bsp *BaseSysrootProvisioner) Activate() error {
-	bsp.GetLogger().Info("Activating system root")
-	for _, src := range []string{"/proc", "/sys", "/dev", "/run"} {
-		bsp.GetLogger().Debugf("Mounting %s...", src)
-		if err := syscall.Mount(src, path.Join(bsp.sysrootPath, src), "", syscall.MS_BIND, ""); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 // Checks an existing system root
 func (bsp *BaseSysrootProvisioner) CheckExisting(checkExists bool) error {
 	if checkExists {
@@ -59,9 +48,21 @@ func (bsp *BaseSysrootProvisioner) CheckExisting(checkExists bool) error {
 	return nil
 }
 
-// SetSysPath of the system root
+// SetSysPath of all system roots together, default is "/usr/syroots"
 func (bsp *BaseSysrootProvisioner) SetSysPath(p string) {
+	// Due to nature of this class, certain configuration methods should be called separately,
+	// and later after the constructor, but this particular one requires to be called last in order.
+	if bsp.name == "" {
+		panic("SetName() should be called first")
+	}
+
+	if bsp.arch == "" {
+		panic("SetArch() should be called first")
+	}
+
 	bsp.sysPath = p
+	bsp.sysrootPath = path.Join(bsp.sysPath, fmt.Sprintf("%s.%s", bsp.name, bsp.arch))
+	bsp.confPath = path.Join(bsp.sysrootPath, ChildSysrootConfig)
 }
 
 // SetName of the system root
@@ -75,9 +76,6 @@ func (bsp *BaseSysrootProvisioner) SetArch(arch string) {
 }
 
 func (bsp *BaseSysrootProvisioner) beforePopulate() error {
-	bsp.sysrootPath = path.Join(bsp.sysPath, fmt.Sprintf("%s.%s", bsp.name, bsp.arch))
-	bsp.confPath = path.Join(bsp.sysrootPath, ChildSysrootConfig)
-
 	return bsp.CheckExisting(true)
 }
 

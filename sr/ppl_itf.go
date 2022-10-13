@@ -14,6 +14,7 @@ type SysrootProvisioner interface {
 	SetName(n string)
 	SetSysPath(p string) // Path of the root
 	GetConfigPath() string
+	UnmountBinds() error
 
 	// Internal hooks, should be private and used only in implementation.
 	beforePopulate() error // Called before population

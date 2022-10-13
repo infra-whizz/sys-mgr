@@ -43,6 +43,16 @@ func NewDebianSysrootProvisioner(name, arch, root string) *DebianSysrootProvisio
 	return dsp
 }
 
+func (bsp *DebianSysrootProvisioner) Activate() error {
+	// Nothing to do here
+	return nil
+}
+
+func (dsp *DebianSysrootProvisioner) UnmountBinds() error {
+	// Nothing to do here
+	return nil
+}
+
 func (dsp *DebianSysrootProvisioner) getQemuPath() string {
 	return dsp.qemuPath
 }

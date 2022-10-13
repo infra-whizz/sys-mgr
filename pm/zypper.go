@@ -81,3 +81,7 @@ func (pm *ZypperPackageManager) Setup() error {
 
 	return ioutil.WriteFile(zyppConf, []byte(buff.String()), 0644)
 }
+
+func (pm *ZypperPackageManager) GetHelpFlags() map[string]string {
+	return nil
+}

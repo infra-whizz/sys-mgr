@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"sort"
 	"strings"
 
 	sysmgr "github.com/infra-whizz/sys-mgr"
@@ -32,6 +33,24 @@ func init() {
 	}
 }
 
+func buildAppHelpCommands(app *cli.App) string {
+	flags := sm.PkgManager().GetHelpFlags()
+	keys := []string{}
+	for k := range flags {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	out := ""
+	for _, k := range keys {
+		out += fmt.Sprintf("  %s\t%s\n", k, flags[k])
+	}
+	for _, c := range app.Commands {
+		out += fmt.Sprintf("  %s\t%s", c.Name, c.Usage)
+	}
+
+	return out
+}
+
 func main() {
 	app := &cli.App{
 		Version: VERSION,
@@ -53,13 +72,15 @@ CATEGORY:
 DESCRIPTION:
 	{{wrap .Description 3}}{{end}}{{if .VisibleFlagCategories}}
 
-OPTIONS:{{range .VisibleFlagCategories}}
+OPTIONS:
+	{{range .VisibleFlagCategories}}
 	{{if .Name}}{{.Name}}
 	{{end}}{{range .Flags}}{{.}}
 	{{end}}{{end}}{{else}}{{if .VisibleFlags}}
 
 OPTIONS:
-	{{range .VisibleFlags}}{{.}}{{end}}{{end}}{{end}}
+	{{range .VisibleFlags}}{{.}}
+	{{end}}{{end}}{{end}}
 `,
 
 			Name:   "sysroot",
@@ -107,13 +128,41 @@ OPTIONS:
 					Usage:   fmt.Sprintf("Set architecture for the system root. Choices: %s.", strings.Join(sm.Architectures(), ", ")),
 				},
 				&cli.BoolFlag{
-					Name:    "verbose",
-					Aliases: []string{"v"},
-					Usage:   "Show debugging log",
+					Name:  "verbose",
+					Usage: "Show debugging log",
 				},
 			},
 		},
 	}
+
+	app.CustomAppHelpTemplate = `NAME:
+	{{template "helpNameTemplate" .}}
+
+USAGE:
+	{{if .UsageText}}{{wrap .UsageText 3}}{{else}}{{.HelpName}} {{if .VisibleFlags}}[global options]{{end}}{{if .Commands}} command [command options]{{end}} {{if .ArgsUsage}}{{.ArgsUsage}}{{else}}[arguments...]{{end}}{{end}}{{if .Version}}{{if not .HideVersion}}
+
+VERSION:
+	{{.Version}}{{end}}{{end}}{{if .Description}}
+
+DESCRIPTION:
+   {{template "descriptionTemplate" .}}{{end}}
+{{- if len .Authors}}
+
+AUTHOR{{template "authorsTemplate" .}}{{end}}{{if .VisibleCommands}}
+
+COMMANDS:
+` +
+		buildAppHelpCommands(app) +
+
+		`{{end}}{{if .VisibleFlagCategories}}
+
+GLOBAL OPTIONS:{{template "visibleFlagCategoryTemplate" .}}{{else if .VisibleFlags}}
+
+GLOBAL OPTIONS:{{template "visibleFlagTemplate" .}}{{end}}{{if .Copyright}}
+
+COPYRIGHT:{{template "copyrightTemplate" .}}{{end}}
+
+   `
 
 	var err error
 	if len(os.Args) == 1 || sysmgr.Any(os.Args, "sysroot", "-h", "--help") {

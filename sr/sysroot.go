@@ -6,12 +6,10 @@ import (
 	"os"
 	"path"
 	"strconv"
-	"syscall"
 
 	"github.com/elastic/go-sysinfo"
 	wzlib_logger "github.com/infra-whizz/wzlib/logger"
 	"github.com/isbm/go-nanoconf"
-	"golang.org/x/sys/unix"
 )
 
 type SysRoot struct {
@@ -24,7 +22,7 @@ type SysRoot struct {
 	sysPath  string
 	qemuPath string
 
-	provisioner SysrootProvisioner
+	_provisioner SysrootProvisioner
 
 	wzlib_logger.WzLogger
 }
@@ -50,6 +48,22 @@ func (sr *SysRoot) SetArch(arch string) *SysRoot {
 		sr.Arch = arch
 	}
 	return sr
+}
+
+func (sr *SysRoot) GetProvisioner() (SysrootProvisioner, error) {
+	if sr._provisioner == nil {
+		// Initialise provisioner
+		p := sr.GetCurrentPlatform()
+		switch p {
+		case "ubuntu", "debian":
+			sr._provisioner = NewDebianSysrootProvisioner(sr.Name, sr.Arch, sr.sysPath)
+		case "opensuse-leap":
+			sr._provisioner = NewZypperSysrootProvisioner(sr.Name, sr.Arch, sr.sysPath)
+		default:
+			return nil, fmt.Errorf("Unable to initialise provisioner for unsupported platform: %s", p)
+		}
+	}
+	return sr._provisioner, nil
 }
 
 // Init system root.
@@ -129,18 +143,12 @@ func (sr *SysRoot) GetCurrentPlatform() string {
 
 // Create a system root
 func (sr *SysRoot) Create() error {
-	// Initialise provisioner
-	p := sr.GetCurrentPlatform()
-	switch p {
-	case "ubuntu", "debian":
-		sr.provisioner = NewDebianSysrootProvisioner(sr.Name, sr.Arch, sr.sysPath)
-	case "opensuse-leap":
-		sr.provisioner = NewZypperSysrootProvisioner(sr.Name, sr.Arch, sr.sysPath)
-	default:
-		return fmt.Errorf("Unable to initialise provisioner for unsupported platform: %s", p)
+	provisioner, err := sr.GetProvisioner()
+	if err != nil {
+		return err
 	}
 
-	return sr.provisioner.Populate()
+	return provisioner.Populate()
 }
 
 // UmountBinds removes proc, dev, sys and run
@@ -149,22 +157,12 @@ func (sr *SysRoot) UmountBinds() error {
 		return err
 	}
 
-	// pre-umount, if anything
-	for _, d := range []string{"/proc", "/dev", "/sys", "/run"} {
-		d = path.Join(sr.Path, d)
-		if err := syscall.Unmount(d, syscall.MNT_DETACH|syscall.MNT_FORCE|unix.UMOUNT_NOFOLLOW); err != nil {
-			sr.GetLogger().Warnf("Unable to unmount %s", d)
-		}
-		files, err := ioutil.ReadDir(d)
-		if err != nil {
-			return err
-		}
-		if len(files) > 0 {
-			return fmt.Errorf("Failed to unmount %s. Please umount it manually.", d)
-		}
+	provisioner, err := sr.GetProvisioner()
+	if err != nil {
+		return err
 	}
 
-	return nil
+	return provisioner.UnmountBinds()
 }
 
 // Delete a system root
@@ -198,15 +196,21 @@ func (sr *SysRoot) SetDefault(isDefault bool) error {
 		return err
 	}
 
-	return ioutil.WriteFile(sr.provisioner.GetConfigPath(), []byte(fmt.Sprintf("name: %s\narch: %s\ndefault: %s\n",
+	provisioner, err := sr.GetProvisioner()
+	if err != nil {
+		return err
+	}
+
+	return ioutil.WriteFile(provisioner.GetConfigPath(), []byte(fmt.Sprintf("name: %s\narch: %s\ndefault: %s\n",
 		sr.Name, sr.Arch, strconv.FormatBool(isDefault))), 0644)
 }
 
 // Activate default sysroot (mount runtime directories)
 func (sr *SysRoot) Activate() error {
-	if sr.provisioner == nil {
-		return fmt.Errorf("Sysroot was not properly initialised")
+	provisioner, err := sr.GetProvisioner()
+	if err != nil {
+		return err
 	}
 
-	return sr.provisioner.Activate()
+	return provisioner.Activate()
 }

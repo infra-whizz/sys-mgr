@@ -370,7 +370,7 @@ func (srm SysrootManager) RunSystemManager(ctx *cli.Context) error {
 	} else if ctx.Bool("init") {
 		return srm.actionInitSysroot()
 	} else {
-		cli.ShowSubcommandHelpAndExit(ctx, 1)
+		cli.ShowSubcommandHelp(ctx)
 	}
 	return nil
 }

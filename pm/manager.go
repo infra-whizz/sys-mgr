@@ -19,6 +19,9 @@ type PackageManager interface {
 
 	// Setup package manager, once sysroot is given. This will write required configurations
 	Setup() error
+
+	// Extract help flags to override package manager
+	GetHelpFlags() map[string]string
 }
 
 // StdProcessStream is just a generic pipe to the STDOUT and nothing else at this time

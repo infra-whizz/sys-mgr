@@ -24,3 +24,11 @@ func LoggedExec(cmd string, args ...string) error {
 	out.Stderr = os.Stderr
 	return out.Run()
 }
+
+func StdoutExec(cmd string, args ...string) error {
+	out := exec.Command(cmd, args...)
+	out.Stdin = os.Stdin
+	out.Stdout = os.Stdout
+	out.Stderr = os.Stderr
+	return out.Run()
+}
