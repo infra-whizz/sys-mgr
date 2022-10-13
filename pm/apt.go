@@ -1,6 +1,9 @@
 package sysmgr_pm
 
 import (
+	"fmt"
+	"path"
+
 	sysmgr_lib "github.com/infra-whizz/sys-mgr/lib"
 	sysmgr_sr "github.com/infra-whizz/sys-mgr/sr"
 )
@@ -8,6 +11,10 @@ import (
 type AptPackageManager struct {
 	sysroot *sysmgr_sr.SysRoot
 	archFix map[string]string
+
+	dpkgConverse map[string]string
+	dpkgCommands []string
+	chrooted     []string
 
 	BasePackageManager
 }
@@ -18,16 +25,27 @@ func NewAptPackageManager() *AptPackageManager {
 	pm.archFix = map[string]string{}
 	pm.env = map[string]string{}
 
+	pm.dpkgCommands = []string{"list-installed", "installed", "files", "content"}
+	pm.dpkgConverse = map[string]string{"list-installed": "-l", "installed": "-l", "files": "-L", "content": "-L"}
+	pm.chrooted = []string{"install", "reinstall", "remove", "autoremove", "update", "upgrade", "full-upgrade", "satisfy"}
+
 	return pm
 }
 
 // Call apt/dpkg
 func (pm *AptPackageManager) Call(args ...string) error {
-	chrooted := []string{"install", "reinstall", "remove", "autoremove", "update", "upgrade", "full-upgrade", "satisfy"}
-	if sysmgr_lib.Any(args[0], chrooted) {
+	if sysmgr_lib.Any(pm.chrooted, args[0]) {
+		if err := sysmgr_lib.CheckUser(0, 0); err != nil {
+			return fmt.Errorf("Root privileges required")
+		}
 		return sysmgr_lib.StdoutExec("chroot", append([]string{pm.sysroot.Path, "apt"}, args...)...)
+	} else if sysmgr_lib.Any(pm.dpkgCommands, args[0]) {
+		return sysmgr_lib.StdoutExec(path.Join(pm.sysroot.Path, "usr", "bin", "dpkg"),
+			append([]string{"--root", pm.sysroot.Path, pm.dpkgConverse[args[0]]}, args[1:]...)...)
+	} else {
+		return sysmgr_lib.StdoutExec(path.Join(pm.sysroot.Path, "usr", "bin", "apt"),
+			append([]string{"-o", fmt.Sprintf("RootDir=%s", pm.sysroot.Path)}, args...)...)
 	}
-	return nil
 }
 
 // Name of the package manager
@@ -51,17 +69,19 @@ func (pm *AptPackageManager) Setup() error {
 
 func (pm *AptPackageManager) GetHelpFlags() map[string]string {
 	return map[string]string{
-		"list":         "List packages based on package names",
-		"search":       "Search in package descriptions",
-		"show":         "Show package details",
-		"install":      "Install packages",
-		"reinstall":    "Reinstall packages",
-		"remove":       "Remove packages",
-		"autoremove":   "Remove automatically all unused packages",
-		"update":       "Update list of available packages",
-		"upgrade":      "Upgrade the system by installing/upgrading packages",
-		"full-upgrade": "Upgrade the system by removing/installing/upgrading packages",
-		"edit-sources": "Edit the source information file",
-		"satisfy":      "Satisfy dependency strings",
+		"list":                        "List packages based on package names",
+		"search":                      "Search in package descriptions",
+		"show":                        "Show package details",
+		"install":                     "Install packages",
+		"reinstall":                   "Reinstall packages",
+		"remove":                      "Remove packages",
+		"autoremove":                  "Remove automatically all unused packages",
+		"update":                      "Update list of available packages",
+		"upgrade":                     "Upgrade the system by installing/upgrading packages",
+		"full-upgrade":                "Upgrade the system by removing/installing/upgrading packages",
+		"edit-sources":                "Edit the source information file",
+		"(list-installed, installed)": "List installed packages",
+		"(files, content) <PACKAGE>":  "List contents of a specific package",
+		"satisfy":                     "Satisfy dependency strings",
 	}
 }
