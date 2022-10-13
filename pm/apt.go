@@ -23,7 +23,11 @@ func NewAptPackageManager() *AptPackageManager {
 
 // Call apt/dpkg
 func (pm *AptPackageManager) Call(args ...string) error {
-	return sysmgr_lib.StdoutExec("chroot", append([]string{pm.sysroot.Path, "apt"}, args...)...)
+	chrooted := []string{"install", "reinstall", "remove", "autoremove", "update", "upgrade", "full-upgrade", "satisfy"}
+	if sysmgr_lib.Any(args[0], chrooted) {
+		return sysmgr_lib.StdoutExec("chroot", append([]string{pm.sysroot.Path, "apt"}, args...)...)
+	}
+	return nil
 }
 
 // Name of the package manager
