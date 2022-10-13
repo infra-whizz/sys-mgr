@@ -34,11 +34,18 @@ func NewAptPackageManager() *AptPackageManager {
 
 // Call apt/dpkg
 func (pm *AptPackageManager) Call(args ...string) error {
-	if sysmgr_lib.Any(pm.chrooted, args[0]) {
+	if sysmgr_lib.Any([]string{"chroot", "c"}, args[0]) {
+		cmd := []string{"chroot", pm.sysroot.Path}
 		if err := sysmgr_lib.CheckUser(0, 0); err != nil {
-			return fmt.Errorf("Root privileges required")
+			cmd = append([]string{"sudo"}, cmd...)
 		}
-		return sysmgr_lib.StdoutExec("chroot", append([]string{pm.sysroot.Path, "apt"}, args...)...)
+		return sysmgr_lib.StdoutExec(cmd[0], append(cmd[1:], args[1:]...)...)
+	} else if sysmgr_lib.Any(pm.chrooted, args[0]) {
+		cmd := append([]string{"chroot", pm.sysroot.Path, "apt"}, args...)
+		if err := sysmgr_lib.CheckUser(0, 0); err != nil {
+			cmd = append([]string{"sudo"}, cmd...)
+		}
+		return sysmgr_lib.StdoutExec(cmd[0], cmd[1:]...)
 	} else if sysmgr_lib.Any(pm.dpkgCommands, args[0]) {
 		return sysmgr_lib.StdoutExec(path.Join(pm.sysroot.Path, "usr", "bin", "dpkg"),
 			append([]string{"--root", pm.sysroot.Path, pm.dpkgConverse[args[0]]}, args[1:]...)...)
@@ -82,6 +89,7 @@ func (pm *AptPackageManager) GetHelpFlags() map[string]string {
 		"edit-sources":                "Edit the source information file",
 		"(list-installed, installed)": "List installed packages",
 		"(files, content) <PACKAGE>":  "List contents of a specific package",
+		"(c, chroot) [COMMAND]":       "Change root to the selected sysroot",
 		"satisfy":                     "Satisfy dependency strings",
 	}
 }
