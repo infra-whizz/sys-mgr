@@ -7,6 +7,7 @@ import (
 	"path"
 	"strings"
 
+	wzlib_logger "github.com/infra-whizz/wzlib/logger"
 	"github.com/isbm/go-nanoconf"
 	"github.com/thoas/go-funk"
 )
@@ -18,6 +19,7 @@ var ChildSysrootConfig string = "/etc/sysroot.conf"
 type SysrootManager struct {
 	sysroots      string
 	architectures []string
+	wzlib_logger.WzLogger
 }
 
 func NewSysrootManager(conf *nanoconf.Config) *SysrootManager {
@@ -49,6 +51,8 @@ func (srm *SysrootManager) CreateSysRoot(name string, arch string) (*SysRoot, er
 	if err := srm.checkArch(arch); err != nil {
 		return nil, err
 	}
+
+	srm.GetLogger().Debugf("Placing sysroot into %s", srm.sysroots)
 
 	sysroot := NewSysRoot(srm.sysroots).SetName(name).SetArch(arch)
 	if err := sysroot.Create(); err != nil {

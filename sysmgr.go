@@ -183,14 +183,20 @@ func (srm SysrootManager) getNameArch(ctx *cli.Context) (string, string) {
 
 // actionSetDefault sets the systemroot as default, installing all the necessary bits
 func (srm SysrootManager) actionSetDefault(ctx *cli.Context) error {
+	srm.GetLogger().Debug("Checking root id")
 	srm.ExitOnNonRootUID()
+
+	srm.GetLogger().Debug("Getting arch")
 	name, arch := srm.getNameArch(ctx)
 
 	// Detach current default
+	srm.GetLogger().Debug("Getting default system root")
 	psr, err := srm.mgr.GetDefaultSysroot()
 	if err != nil {
 		return err
 	}
+
+	srm.GetLogger().Debug("Unmmounting binds...")
 	if psr != nil {
 		if err := psr.UmountBinds(); err != nil {
 			return err
@@ -239,19 +245,19 @@ func (srm SysrootManager) actionCreate(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	srm.GetLogger().Debugf("Sysroot %s has been created", sysroot.Name)
+	srm.GetLogger().Debugf("Sysroot \"%s\" has been created", sysroot.Name)
 
 	if err := sysroot.SetDefault(isDefault); err != nil {
 		return err
 	}
 
-	srm.GetLogger().Debugf("Sysroot %s is default: %s", isDefault)
+	srm.GetLogger().Debugf("Sysroot \"%s\" is default: %v", sysroot.Name, isDefault)
 
 	if err := srm.pkgman.SetSysroot(sysroot).Setup(); err != nil {
 		return err
 	}
 
-	srm.GetLogger().Debugf("Sysroot %s setup done", sysroot.Name)
+	srm.GetLogger().Debugf("Setup of sysroot \"%s\" succeeded", sysroot.Name)
 
 	if isDefault {
 		srm.GetLogger().Debugf("Activating default system root")

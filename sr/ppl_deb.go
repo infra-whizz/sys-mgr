@@ -126,6 +126,8 @@ func (dsp *DebianSysrootProvisioner) onPopulate() error {
 		return err
 	}
 
+	dsp.GetLogger().Debugf("Populating sysroot into %s", dsp.sysrootPath)
+
 	if err = sysmgr_lib.LoggedExec("debootstrap", "--arch", dsp.GetArch(), "--no-check-gpg", "--variant=minbase",
 		fmt.Sprintf("--components=%s", strings.Join(dsp.rd.components, ",")), dsp.rd.codename, dsp.sysrootPath, dsp.rd.url); err != nil {
 		return err
