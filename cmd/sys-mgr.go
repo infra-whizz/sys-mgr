@@ -17,7 +17,6 @@ import (
 )
 
 var sm *sysmgr.SysrootManager
-var VERSION string = "1.1"
 
 func init() {
 	sm = sysmgr.NewSysrootManager(path.Base(os.Args[0]))
@@ -26,7 +25,7 @@ func init() {
 	if funk.Contains(os.Args, "--verbose") || funk.Contains(os.Args, "--debug") {
 		wzlib_logger.GetCurrentLogger().SetLevel(logrus.TraceLevel)
 	} else {
-		wzlib_logger.GetCurrentLogger().SetLevel(logrus.ErrorLevel)
+		wzlib_logger.GetCurrentLogger().SetLevel(logrus.InfoLevel)
 	}
 
 	if err := sm.RunArchGate(); err != nil {
@@ -55,7 +54,7 @@ func buildAppHelpCommands(app *cli.App) string {
 
 func main() {
 	app := &cli.App{
-		Version: VERSION,
+		Version: sysmgr.VERSION,
 		Name:    sm.AppName(),
 		Usage:   fmt.Sprintf("System root manager (via %s)", sm.PkgManager().Name()),
 	}
@@ -132,6 +131,10 @@ OPTIONS:
 				&cli.BoolFlag{
 					Name:  "verbose",
 					Usage: "Show debugging log",
+				},
+				&cli.BoolFlag{
+					Name:  "version",
+					Usage: "Show sysroot-manager version",
 				},
 			},
 		},

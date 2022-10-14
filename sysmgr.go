@@ -6,6 +6,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
 
@@ -30,6 +31,8 @@ type SysrootManager struct {
 
 	wzlib_logger.WzLogger
 }
+
+var VERSION string = "2.0"
 
 // NewSysrootManager constructor
 func NewSysrootManager(appname string) *SysrootManager {
@@ -370,8 +373,10 @@ func (srm SysrootManager) RunSystemManager(ctx *cli.Context) error {
 		return srm.actionShowDefaultPath()
 	} else if ctx.Bool("init") {
 		return srm.actionInitSysroot()
+	} else if ctx.Bool("version") {
+		fmt.Printf("sysroot-manager %s (%s)\n", VERSION, runtime.GOARCH)
 	} else {
-		cli.ShowSubcommandHelp(ctx)
+		return cli.ShowSubcommandHelp(ctx)
 	}
 	return nil
 }
