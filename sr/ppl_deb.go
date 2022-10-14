@@ -93,7 +93,14 @@ func (dsp *DebianSysrootProvisioner) getRepoData() (*repodata, error) {
 		}
 
 		tkn := strings.Fields(line)
-		if len(tkn) < 3 || tkn[2] != r.codename {
+		if len(tkn) < 3 {
+			continue
+		}
+
+		if tkn[2] != r.codename && tkn[2] == "sid" {
+			r.codename = "sid"
+		}
+		if tkn[2] != r.codename {
 			continue
 		}
 
@@ -163,17 +170,19 @@ func (dsp *DebianSysrootProvisioner) afterPopulate() error {
 		return err
 	}
 
-	// Add to sources.list if anything
-	f, err := os.OpenFile(path.Join(dsp.sysrootPath, "etc", "apt", "sources.list"), os.O_APPEND|os.O_WRONLY, 0644)
-	if err != nil {
-		return err
-	}
-	for _, section := range []string{"updates", "backports", "security"} {
-		if _, err := f.WriteString(fmt.Sprintf("deb %s %s-%s %s\n", dsp.rd.url, dsp.rd.codename, section, strings.Join(dsp.rd.components, " "))); err != nil {
+	// Add to sources.list if Ubuntu, but don't if Debian
+	if dsp.sysinfo.Get("os.platform") == "ubuntu" {
+		f, err := os.OpenFile(path.Join(dsp.sysrootPath, "etc", "apt", "sources.list"), os.O_APPEND|os.O_WRONLY, 0644)
+		if err != nil {
 			return err
 		}
+		for _, section := range []string{"updates", "backports", "security"} {
+			if _, err := f.WriteString(fmt.Sprintf("deb %s %s-%s %s\n", dsp.rd.url, dsp.rd.codename, section, strings.Join(dsp.rd.components, " "))); err != nil {
+				return err
+			}
+		}
+		f.Close()
 	}
-	f.Close()
 
 	// Upgrade everything
 	if err := sysmgr_lib.LoggedExec("chroot", dsp.sysrootPath, "apt-get", "update"); err != nil {
