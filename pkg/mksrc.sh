@@ -3,9 +3,9 @@
 # Configuration
 P_NAME="sysroot-manager"
 P_APP="cmd/sys-mgr.go"
-P_SRC_DIRS=("arch" "pm" "pm/fixlets" "sr" "cmd")
+P_SRC_DIRS=("arch" "pm" "pm/fixlets" "sr" "lib" "cmd")
 P_DOC_DIRS=("etc")
-P_FILES=("LICENSE" "README.md" "go.mod" "go.sum" "utils.go" "sysmgr.go")
+P_FILES=("LICENSE" "README.md" "go.mod" "go.sum" "sysmgr.go")
 P_CMD=("Makefile")
 
 set -e
@@ -40,7 +40,7 @@ function check_location {
 # Get current version of the repodiff
 #
 function get_version {
-    echo $(cat ../$P_APP | awk '/var VERSION/ {split($0,v,"\""); print v[2]}')
+    echo $(cat ../sysmgr.go | awk '/var VERSION/ {split($0,v,"\""); print v[2]}')
 }
 
 #
