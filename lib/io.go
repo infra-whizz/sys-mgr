@@ -18,6 +18,7 @@ func (sl *StdoutLogger) Write(p []byte) (n int, err error) {
 }
 
 func LoggedExec(cmd string, args ...string) error {
+	wzlib_logger.GetCurrentLogger().Debugf("Calling: %s %v", cmd, args)
 	out := exec.Command(cmd, args...)
 	out.Stdin = os.Stdin
 	out.Stdout = &StdoutLogger{}
