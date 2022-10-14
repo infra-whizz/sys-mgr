@@ -27,7 +27,7 @@ func NewAptPackageManager() *AptPackageManager {
 
 	pm.dpkgCommands = []string{"list-installed", "installed", "files", "content"}
 	pm.dpkgConverse = map[string]string{"list-installed": "-l", "installed": "-l", "files": "-L", "content": "-L"}
-	pm.chrooted = []string{"install", "reinstall", "remove", "autoremove", "update", "upgrade", "full-upgrade", "satisfy"}
+	pm.chrooted = []string{"install", "reinstall", "remove", "autoremove", "update", "upgrade", "full-upgrade", "satisfy", "purge"}
 
 	return pm
 }
@@ -80,6 +80,7 @@ func (pm *AptPackageManager) GetHelpFlags() map[string]string {
 		"search":                      "Search in package descriptions",
 		"show":                        "Show package details",
 		"install":                     "Install packages",
+		"purge":                       "Completely uninstall selected packages",
 		"reinstall":                   "Reinstall packages",
 		"remove":                      "Remove packages",
 		"autoremove":                  "Remove automatically all unused packages",
