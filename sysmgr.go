@@ -6,10 +6,12 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
 
 	sysmgr_arch "github.com/infra-whizz/sys-mgr/arch"
+	sysmgr_lib "github.com/infra-whizz/sys-mgr/lib"
 	sysmgr_pm "github.com/infra-whizz/sys-mgr/pm"
 	sysmgr_sr "github.com/infra-whizz/sys-mgr/sr"
 	wzlib_logger "github.com/infra-whizz/wzlib/logger"
@@ -30,10 +32,12 @@ type SysrootManager struct {
 	wzlib_logger.WzLogger
 }
 
+var VERSION string = "2.0"
+
 // NewSysrootManager constructor
 func NewSysrootManager(appname string) *SysrootManager {
 	srm := new(SysrootManager)
-	srm.pkgman = GetCurrentPackageManager()
+	srm.pkgman = sysmgr_pm.GetCurrentPackageManager()
 	srm.binfmt = sysmgr_arch.NewBinFormat()
 	srm.appname = appname
 
@@ -76,7 +80,7 @@ func (srm SysrootManager) Architectures() []string {
 // ExitOnNonRootUID will terminate program immediately if caller is not UID root.
 func (srm SysrootManager) ExitOnNonRootUID() {
 	if !funk.Contains(os.Args, "-h") && !funk.Contains(os.Args, "--help") {
-		if err := CheckUser(0, 0); err != nil {
+		if err := sysmgr_lib.CheckUser(0, 0); err != nil {
 			wzlib_logger.GetCurrentLogger().Error("Root privileges are required to run this command.")
 			os.Exit(1)
 		}
@@ -183,14 +187,20 @@ func (srm SysrootManager) getNameArch(ctx *cli.Context) (string, string) {
 
 // actionSetDefault sets the systemroot as default, installing all the necessary bits
 func (srm SysrootManager) actionSetDefault(ctx *cli.Context) error {
+	srm.GetLogger().Debug("Checking root id")
 	srm.ExitOnNonRootUID()
+
+	srm.GetLogger().Debug("Getting arch")
 	name, arch := srm.getNameArch(ctx)
 
 	// Detach current default
+	srm.GetLogger().Debug("Getting default system root")
 	psr, err := srm.mgr.GetDefaultSysroot()
 	if err != nil {
 		return err
 	}
+
+	srm.GetLogger().Debug("Unmmounting binds...")
 	if psr != nil {
 		if err := psr.UmountBinds(); err != nil {
 			return err
@@ -239,12 +249,20 @@ func (srm SysrootManager) actionCreate(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
+	srm.GetLogger().Debugf("Sysroot \"%s\" has been created", sysroot.Name)
+
 	if err := sysroot.SetDefault(isDefault); err != nil {
 		return err
 	}
+
+	srm.GetLogger().Debugf("Sysroot \"%s\" is default: %v", sysroot.Name, isDefault)
+
 	if err := srm.pkgman.SetSysroot(sysroot).Setup(); err != nil {
 		return err
 	}
+
+	srm.GetLogger().Debugf("Setup of sysroot \"%s\" succeeded", sysroot.Name)
+
 	if isDefault {
 		srm.GetLogger().Debugf("Activating default system root")
 		if err := sysroot.Activate(); err != nil {
@@ -272,6 +290,8 @@ func (srm SysrootManager) actionListSysroots() error {
 			fmt.Printf("%s  %d. %s (%s)\n", d, idx+1, sr.Name, sr.Arch)
 
 		}
+	} else {
+		srm.GetLogger().Errorln("No system roots configured yet")
 	}
 	return nil
 }
@@ -295,9 +315,12 @@ func (srm SysrootManager) actionInitSysroot() error {
 		return err
 	}
 
-	if err := srm.binfmt.Register(sr.Arch); err != nil {
-		return err
-	}
+	/*
+		// Don't do that for now, it might render the system unusable at this point. :-)
+		if err := srm.binfmt.Register(sr.Arch); err != nil {
+			return err
+		}
+	*/
 
 	if err := sysmgr_arch.NewSystemdService().SetPackageManager(srm.pkgman).Create(sr.Arch); err != nil {
 		return err
@@ -350,8 +373,10 @@ func (srm SysrootManager) RunSystemManager(ctx *cli.Context) error {
 		return srm.actionShowDefaultPath()
 	} else if ctx.Bool("init") {
 		return srm.actionInitSysroot()
+	} else if ctx.Bool("version") {
+		fmt.Printf("sysroot-manager %s (%s)\n", VERSION, runtime.GOARCH)
 	} else {
-		cli.ShowSubcommandHelpAndExit(ctx, 1)
+		return cli.ShowSubcommandHelp(ctx)
 	}
 	return nil
 }

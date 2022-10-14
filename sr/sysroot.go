@@ -4,16 +4,13 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path"
 	"strconv"
-	"strings"
-	"syscall"
 
+	"github.com/elastic/go-sysinfo"
+	sysmgr_lib "github.com/infra-whizz/sys-mgr/lib"
 	wzlib_logger "github.com/infra-whizz/wzlib/logger"
 	"github.com/isbm/go-nanoconf"
-	"github.com/isbm/go-shutil"
-	"golang.org/x/sys/unix"
 )
 
 type SysRoot struct {
@@ -25,6 +22,8 @@ type SysRoot struct {
 	confPath string
 	sysPath  string
 	qemuPath string
+
+	_provisioner SysrootProvisioner
 
 	wzlib_logger.WzLogger
 }
@@ -50,6 +49,22 @@ func (sr *SysRoot) SetArch(arch string) *SysRoot {
 		sr.Arch = arch
 	}
 	return sr
+}
+
+func (sr *SysRoot) GetProvisioner() (SysrootProvisioner, error) {
+	if sr._provisioner == nil {
+		// Initialise provisioner
+		p := sr.GetCurrentPlatform()
+		switch p {
+		case "ubuntu", "debian":
+			sr._provisioner = NewDebianSysrootProvisioner(sr.Name, sr.Arch, sr.sysPath)
+		case "opensuse-leap":
+			sr._provisioner = NewZypperSysrootProvisioner(sr.Name, sr.Arch, sr.sysPath)
+		default:
+			return nil, fmt.Errorf("Unable to initialise provisioner for unsupported platform: %s", p)
+		}
+	}
+	return sr._provisioner, nil
 }
 
 // Init system root.
@@ -88,7 +103,7 @@ func (sr *SysRoot) Init() (*SysRoot, error) {
 	sr.SetName(conf.Root().String("name", ""))
 	sr.SetArch(conf.Root().String("arch", ""))
 
-	isDefault := (*conf.Root().Raw())["default"]
+	isDefault := conf.Root().Raw()["default"]
 	if isDefault != nil {
 		sr.Default = isDefault.(bool)
 	}
@@ -116,89 +131,25 @@ func (sr *SysRoot) checkExistingSysroot(checkExists bool) error {
 	return nil
 }
 
-// replicate self
-func (sr *SysRoot) replicate() error {
-	selfPath, err := os.Executable()
+// GetCurrentPlatform returns a current platform class
+// XXX: Needs to be moved to the utils, but that requires a major refactoring.
+func (sr *SysRoot) GetCurrentPlatform() string {
+	info, err := sysinfo.Host()
 	if err != nil {
-		return err
+		panic(err)
 	}
 
-	for _, bin := range []string{selfPath, sr.qemuPath} {
-		sr.GetLogger().Debugf("Preparing %s", bin)
-
-		// Setup target dir
-		target := path.Join(sr.Path, path.Dir(bin))
-		if _, err = os.Stat(target); os.IsNotExist(err) {
-			sr.GetLogger().Debugf("Creating directory %s", target)
-			if err = os.MkdirAll(target, 0755); err != nil {
-				return err
-			}
-		}
-
-		// Copy required utility
-		target = path.Join(target, path.Base(bin))
-		sr.GetLogger().Debugf("Copying %s to %s", bin, target)
-		if err = shutil.CopyFile(bin, target, false); err != nil {
-			return err
-		}
-		sr.GetLogger().Debugf("Setting %s as 0755", target)
-		if err = syscall.Chmod(target, 0755); err != nil {
-			return err
-		}
-	}
-
-	return nil
+	return info.Info().OS.Platform
 }
 
 // Create a system root
 func (sr *SysRoot) Create() error {
-	var err error
-	if sr.qemuPath, err = exec.LookPath(fmt.Sprintf("qemu-%s", sr.Arch)); err != nil {
-		return err
-	}
-
-	sr.Path = path.Join(sr.sysPath, fmt.Sprintf("%s.%s", sr.Name, sr.Arch))
-	sr.confPath = path.Join(sr.Path, ChildSysrootConfig)
-
-	if err = sr.checkExistingSysroot(true); err != nil {
-		return err
-	}
-
-	for _, d := range []string{"/etc", "/proc", "/dev", "/sys", "/run", "/tmp"} {
-		if err = os.MkdirAll(path.Join(sr.Path, d), 0755); err != nil {
-			return err
-		}
-	}
-
-	// Create sysroot configuration
-	if err = ioutil.WriteFile(sr.confPath, []byte(fmt.Sprintf("name: %s\narch: %s\ndefault: false\n", sr.Name, sr.Arch)), 0644); err != nil {
-		return err
-	}
-
-	// Add basic skeleton for package manager should work
-	files, err := ioutil.ReadDir("/etc")
+	provisioner, err := sr.GetProvisioner()
 	if err != nil {
 		return err
 	}
 
-	// Copy *-relese files
-	for _, f := range files {
-		if strings.HasSuffix(f.Name(), "-release") {
-			srcpath := path.Join("/etc", f.Name())
-			tgtpath := path.Join(sr.Path, "etc", f.Name())
-			sr.GetLogger().Debugf("Copying %s to %s", srcpath, tgtpath)
-
-			data, err := ioutil.ReadFile(srcpath)
-			if err != nil {
-				return err
-			}
-			if err := ioutil.WriteFile(tgtpath, data, 0644); err != nil {
-				return err
-			}
-		}
-	}
-
-	return sr.replicate()
+	return provisioner.Populate()
 }
 
 // UmountBinds removes proc, dev, sys and run
@@ -207,22 +158,11 @@ func (sr *SysRoot) UmountBinds() error {
 		return err
 	}
 
-	// pre-umount, if anything
-	for _, d := range []string{"/proc", "/dev", "/sys", "/run"} {
-		d = path.Join(sr.Path, d)
-		if err := syscall.Unmount(d, syscall.MNT_DETACH|syscall.MNT_FORCE|unix.UMOUNT_NOFOLLOW); err != nil {
-			sr.GetLogger().Warnf("Unable to unmount %s", d)
-		}
-		files, err := ioutil.ReadDir(d)
-		if err != nil {
-			return err
-		}
-		if len(files) > 0 {
-			return fmt.Errorf("Failed to unmount %s. Please umount it manually.", d)
-		}
+	provisioner, err := sr.GetProvisioner()
+	if err != nil {
+		return err
 	}
-
-	return nil
+	return provisioner.UnmountBinds()
 }
 
 // Delete a system root
@@ -242,7 +182,7 @@ func (sr *SysRoot) Delete() error {
 		if err != nil {
 			return err
 		}
-		if len(files) > 0 {
+		if len(files) > 0 && sysmgr_lib.IsMounted(d) {
 			return fmt.Errorf("Directory %s seems not properly unmounted. Please check it, unmount manually and try again.", d)
 		}
 	}
@@ -256,16 +196,21 @@ func (sr *SysRoot) SetDefault(isDefault bool) error {
 		return err
 	}
 
-	return ioutil.WriteFile(sr.confPath, []byte(fmt.Sprintf("name: %s\narch: %s\ndefault: %s\n",
+	provisioner, err := sr.GetProvisioner()
+	if err != nil {
+		return err
+	}
+
+	return ioutil.WriteFile(provisioner.GetConfigPath(), []byte(fmt.Sprintf("name: %s\narch: %s\ndefault: %s\n",
 		sr.Name, sr.Arch, strconv.FormatBool(isDefault))), 0644)
 }
 
 // Activate default sysroot (mount runtime directories)
 func (sr *SysRoot) Activate() error {
-	for _, src := range []string{"/proc", "/sys", "/dev", "/run"} {
-		if err := syscall.Mount(src, path.Join(sr.Path, src), "", syscall.MS_BIND, ""); err != nil {
-			return err
-		}
+	provisioner, err := sr.GetProvisioner()
+	if err != nil {
+		return err
 	}
-	return nil
+
+	return provisioner.Activate()
 }
