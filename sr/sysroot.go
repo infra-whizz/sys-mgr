@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	"github.com/elastic/go-sysinfo"
+	sysmgr_lib "github.com/infra-whizz/sys-mgr/lib"
 	wzlib_logger "github.com/infra-whizz/wzlib/logger"
 	"github.com/isbm/go-nanoconf"
 )
@@ -161,7 +162,6 @@ func (sr *SysRoot) UmountBinds() error {
 	if err != nil {
 		return err
 	}
-
 	return provisioner.UnmountBinds()
 }
 
@@ -182,7 +182,7 @@ func (sr *SysRoot) Delete() error {
 		if err != nil {
 			return err
 		}
-		if len(files) > 0 {
+		if len(files) > 0 && sysmgr_lib.IsMounted(d) {
 			return fmt.Errorf("Directory %s seems not properly unmounted. Please check it, unmount manually and try again.", d)
 		}
 	}
