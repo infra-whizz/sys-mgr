@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	sysmgr_lib "github.com/infra-whizz/sys-mgr/lib"
+	wzlib_logger "github.com/infra-whizz/wzlib/logger"
 	wzlib_traits "github.com/infra-whizz/wzlib/traits"
 	wzlib_traits_attributes "github.com/infra-whizz/wzlib/traits/attributes"
 	wzlib_utils "github.com/infra-whizz/wzlib/utils"
@@ -24,6 +25,7 @@ type repodata struct {
 type DebianSysrootProvisioner struct {
 	BaseSysrootProvisioner
 	rd *repodata
+	wzlib_logger.WzLogger
 }
 
 func NewDebianSysrootProvisioner(name, arch, root string) *DebianSysrootProvisioner {
