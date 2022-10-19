@@ -167,7 +167,7 @@ GLOBAL OPTIONS:{{template "visibleFlagTemplate" .}}{{end}}{{if .Copyright}}
 
 COPYRIGHT:{{template "copyrightTemplate" .}}{{end}}
 
-   `
+`
 
 	var err error
 	if len(os.Args) == 1 || sysmgr_lib.Any(os.Args, "sysroot", "-h", "--help") {
