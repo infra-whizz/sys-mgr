@@ -6,7 +6,17 @@ import (
 
 	sysmgr_lib "github.com/infra-whizz/sys-mgr/lib"
 	sysmgr_sr "github.com/infra-whizz/sys-mgr/sr"
+	"github.com/urfave/cli/v2"
 )
+
+type PmCommand struct {
+	Chroot  bool
+	ZeroUID bool
+
+	cli.Command
+}
+
+type PmCommands []*PmCommand
 
 // PackageManager class interface
 type PackageManager interface {
@@ -23,7 +33,7 @@ type PackageManager interface {
 	Setup() error
 
 	// Extract help flags to override package manager
-	GetHelpFlags() map[string]string
+	GetHelpFlags() *PmCommands
 }
 
 // StdProcessStream is just a generic pipe to the STDOUT and nothing else at this time
