@@ -6,6 +6,7 @@ import (
 
 	sysmgr_lib "github.com/infra-whizz/sys-mgr/lib"
 	sysmgr_sr "github.com/infra-whizz/sys-mgr/sr"
+	"github.com/urfave/cli/v2"
 )
 
 type AptPackageManager struct {
@@ -74,23 +75,135 @@ func (pm *AptPackageManager) Setup() error {
 	return nil
 }
 
-func (pm *AptPackageManager) GetHelpFlags() map[string]string {
-	return map[string]string{
-		"list":                        "List packages based on package names",
-		"search":                      "Search in package descriptions",
-		"show":                        "Show package details",
-		"install":                     "Install packages",
-		"purge":                       "Completely uninstall selected packages",
-		"reinstall":                   "Reinstall packages",
-		"remove":                      "Remove packages",
-		"autoremove":                  "Remove automatically all unused packages",
-		"update":                      "Update list of available packages",
-		"upgrade":                     "Upgrade the system by installing/upgrading packages",
-		"full-upgrade":                "Upgrade the system by removing/installing/upgrading packages",
-		"edit-sources":                "Edit the source information file",
-		"(list-installed, installed)": "List installed packages",
-		"(files, content) <PACKAGE>":  "List contents of a specific package",
-		"(c, chroot) [COMMAND]":       "Change root to the selected sysroot",
-		"satisfy":                     "Satisfy dependency strings",
+func (pm *AptPackageManager) GetHelpFlags() *PmCommands {
+	return &PmCommands{
+		&PmCommand{
+			Chroot: true,
+			Command: cli.Command{
+				Name:    "list",
+				Usage:   "List packages based on package names",
+				Aliases: []string{"ls"},
+			},
+		},
+		&PmCommand{
+			Chroot: true,
+			Command: cli.Command{
+				Name:    "search",
+				Usage:   "Search in package descriptions",
+				Aliases: []string{"se"},
+			},
+		},
+		&PmCommand{
+			Chroot: true,
+			Command: cli.Command{
+				Name:    "show",
+				Usage:   "Show package details",
+				Aliases: []string{"info"},
+			},
+		},
+		&PmCommand{
+			Chroot: true,
+			Command: cli.Command{
+				Name:    "install",
+				Usage:   "Install packages",
+				Aliases: []string{"in"},
+			},
+		},
+		&PmCommand{
+			Chroot: true,
+			Command: cli.Command{
+				Name:    "purge",
+				Usage:   "Completely uninstall selected packages",
+				Aliases: []string{"pg"},
+			},
+		},
+		&PmCommand{
+			Chroot: true,
+			Command: cli.Command{
+				Name:    "reinstall",
+				Usage:   "Reinstall packages",
+				Aliases: []string{"rein", "rin"},
+			},
+		},
+		&PmCommand{
+			Chroot: true,
+			Command: cli.Command{
+				Name:    "remove",
+				Usage:   "Remove packages",
+				Aliases: []string{"rm"},
+			},
+		},
+		&PmCommand{
+			Chroot: true,
+			Command: cli.Command{
+				Name:    "autoremove",
+				Usage:   "Remove automatically all unused packages",
+				Aliases: []string{"arm"},
+			},
+		},
+		&PmCommand{
+			Chroot: true,
+			Command: cli.Command{
+				Name:    "update",
+				Usage:   "Update list of available packages",
+				Aliases: []string{"up"},
+			},
+		},
+		&PmCommand{
+			Chroot: true,
+			Command: cli.Command{
+				Name:    "upgrade",
+				Usage:   "Upgrade the system by installing/upgrading packages",
+				Aliases: []string{"dup"},
+			},
+		},
+		&PmCommand{
+			Chroot: true,
+			Command: cli.Command{
+				Name:    "full-upgrade",
+				Usage:   "Upgrade the system by removing/installing/upgrading packages",
+				Aliases: []string{"fdup"},
+			},
+		},
+		&PmCommand{
+			Chroot: true,
+			Command: cli.Command{
+				Name:    "edit-sources",
+				Usage:   "Edit the source information file",
+				Aliases: []string{"esr"},
+			},
+		},
+		&PmCommand{
+			Chroot: true,
+			Command: cli.Command{
+				Name:    "list-installed",
+				Usage:   "List installed packages",
+				Aliases: []string{"ils", "ils", "installed"},
+			},
+		},
+		&PmCommand{
+			Chroot: true,
+			Command: cli.Command{
+				Name:    "files",
+				Usage:   "List contents of a specific package",
+				Aliases: []string{"content"},
+			},
+		},
+		&PmCommand{
+			Chroot: true,
+			Command: cli.Command{
+				Name:    "chroot",
+				Usage:   "Change root to the selected sysroot",
+				Aliases: []string{"c", "run"},
+			},
+		},
+		&PmCommand{
+			Chroot: true,
+			Command: cli.Command{
+				Name:    "satisfy",
+				Usage:   "Satisfy dependency strings",
+				Aliases: []string{"sat"},
+			},
+		},
 	}
 }

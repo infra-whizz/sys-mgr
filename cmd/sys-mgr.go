@@ -9,6 +9,7 @@ import (
 
 	sysmgr "github.com/infra-whizz/sys-mgr"
 	sysmgr_lib "github.com/infra-whizz/sys-mgr/lib"
+	sysmgr_pm "github.com/infra-whizz/sys-mgr/pm"
 	wzlib_logger "github.com/infra-whizz/wzlib/logger"
 
 	"github.com/sirupsen/logrus"
@@ -35,18 +36,24 @@ func init() {
 }
 
 func buildAppHelpCommands(app *cli.App) string {
-	flags := sm.PkgManager().GetHelpFlags()
+	out := ""
 	keys := []string{}
-	for k := range flags {
-		keys = append(keys, k)
+	idx := map[string]sysmgr_pm.PmCommand{}
+	for _, cm := range *sm.PkgManager().GetHelpFlags() {
+		keys = append(keys, cm.Name)
+		idx[cm.Name] = *cm
 	}
 	sort.Strings(keys)
-	out := ""
 	for _, k := range keys {
-		out += fmt.Sprintf("  %s\t%s\n", k, flags[k])
+		aliases := ""
+		if len(idx[k].Aliases) > 0 {
+			aliases = fmt.Sprintf(" (%s)", strings.Join(idx[k].Aliases, ", "))
+		}
+		out += fmt.Sprintf("  %s%s\t%s\n", idx[k].Name, aliases, idx[k].Usage)
 	}
+
 	for _, c := range app.Commands {
-		out += fmt.Sprintf("  %s\t%s", c.Name, c.Usage)
+		out += fmt.Sprintf("  %s\t%s\n", c.Name, c.Usage)
 	}
 
 	return out
@@ -167,7 +174,7 @@ GLOBAL OPTIONS:{{template "visibleFlagTemplate" .}}{{end}}{{if .Copyright}}
 
 COPYRIGHT:{{template "copyrightTemplate" .}}{{end}}
 
-   `
+`
 
 	var err error
 	if len(os.Args) == 1 || sysmgr_lib.Any(os.Args, "sysroot", "-h", "--help") {
