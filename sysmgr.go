@@ -193,17 +193,15 @@ func (srm SysrootManager) actionSetDefault(ctx *cli.Context) error {
 	srm.GetLogger().Debug("Getting arch")
 	name, arch := srm.getNameArch(ctx)
 
-	// Detach current default
+	// Detach current default, if any
 	srm.GetLogger().Debug("Getting default system root")
 	psr, err := srm.mgr.GetDefaultSysroot()
-	if err != nil {
-		return err
-	}
-
-	srm.GetLogger().Debug("Unmmounting binds...")
-	if psr != nil {
-		if err := psr.UmountBinds(); err != nil {
-			return err
+	if err == nil && psr != nil {
+		srm.GetLogger().Debug("Unmmounting binds...")
+		if psr != nil {
+			if err := psr.UmountBinds(); err != nil {
+				return err
+			}
 		}
 	}
 
