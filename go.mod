@@ -10,8 +10,8 @@ require (
 	github.com/karrick/godirwalk v1.17.0
 	github.com/sirupsen/logrus v1.9.0
 	github.com/thoas/go-funk v0.9.3
-	github.com/urfave/cli/v2 v2.24.4
-	golang.org/x/sys v0.5.0
+	github.com/urfave/cli/v2 v2.25.0
+	golang.org/x/sys v0.6.0
 )
 
 require (
