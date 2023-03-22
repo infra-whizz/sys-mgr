@@ -84,6 +84,7 @@ function copy_packaged_sources {
 }
 
 function copy_vendor_sources {
+    dst=$1
     # copy vendor
     echo "Vendoring deps..."
     pushd ..
@@ -94,7 +95,7 @@ function copy_vendor_sources {
     v_dir="../vendor"
     dir_exists "$v_dir" "Please run 'go mod vendor' to make it."
     echo "Copying vendor libraries..."
-    cp -r $v_dir .
+    mv $v_dir $dst
 }
 
 #
@@ -107,13 +108,6 @@ function create_src_archive {
     dir_exists $dst "Permissions problem?"
     echo "Creating source archive..."
     tar cf - $dst | gzip -9 > $dst.tar.gz
-}
-
-function create_vendor_archive {
-    arc_name="vendor.tar.gz"
-    dir_exists "vendor" "No vendor directory has been found"
-    echo "Creating vendor archive..."
-    tar cf - vendor | gzip -9 > vendor.tar.gz
 }
 
 
@@ -137,8 +131,7 @@ function cleanup {
 check_location
 space=$(prepare_space)
 copy_packaged_sources $space
+copy_vendor_sources $space
 create_src_archive $space
-copy_vendor_sources
-create_vendor_archive
 cleanup $space
 echo "Finished"
