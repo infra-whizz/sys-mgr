@@ -44,8 +44,8 @@ func (dsp *ZypperSysrootProvisioner) getSysPath() string {
 	return dsp.sysPath
 }
 
-func (dsp *ZypperSysrootProvisioner) GetArch() string {
-	return ""
+func (dsp *ZypperSysrootProvisioner) GetArch(arch string) string {
+	return arch
 }
 
 func (dsp *ZypperSysrootProvisioner) Activate() error {
@@ -72,7 +72,7 @@ func (dsp *ZypperSysrootProvisioner) UnmountBinds() error {
 			return err
 		}
 		if len(files) > 0 {
-			return fmt.Errorf("Failed to unmount %s. Please umount it manually.", d)
+			return fmt.Errorf("failed to unmount %s. Please umount it manually", d)
 		}
 	}
 

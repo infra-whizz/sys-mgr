@@ -32,7 +32,7 @@ type SysrootManager struct {
 	wzlib_logger.WzLogger
 }
 
-var VERSION string = "2.0"
+var VERSION string = "2.1"
 
 // NewSysrootManager constructor
 func NewSysrootManager(appname string) *SysrootManager {
@@ -210,6 +210,7 @@ func (srm SysrootManager) actionSetDefault(ctx *cli.Context) error {
 	if err := srm.mgr.SetDefaultSysRoot(name, arch); err != nil {
 		return err
 	}
+
 	if err := srm.binfmt.Register(arch); err != nil {
 		return err
 	}

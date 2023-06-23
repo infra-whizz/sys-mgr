@@ -61,7 +61,7 @@ func (sr *SysRoot) GetProvisioner() (SysrootProvisioner, error) {
 		case "opensuse-leap":
 			sr._provisioner = NewZypperSysrootProvisioner(sr.Name, sr.Arch, sr.sysPath)
 		default:
-			return nil, fmt.Errorf("Unable to initialise provisioner for unsupported platform: %s", p)
+			return nil, fmt.Errorf("unable to initialise provisioner for unsupported platform: %s", p)
 		}
 	}
 	return sr._provisioner, nil
@@ -71,11 +71,11 @@ func (sr *SysRoot) GetProvisioner() (SysrootProvisioner, error) {
 func (sr *SysRoot) Init() (*SysRoot, error) {
 	if sr.sysPath != "/" {
 		if sr.Name == "" {
-			return nil, fmt.Errorf("Name of the sysroot was not specified while looking it up")
+			return nil, fmt.Errorf("name of the sysroot was not specified while looking it up")
 		}
 
 		if sr.Arch == "" {
-			return nil, fmt.Errorf("Architecture of the sysroot was not specified while looking it up")
+			return nil, fmt.Errorf("architecture of the sysroot was not specified while looking it up")
 		}
 	}
 
@@ -88,7 +88,7 @@ func (sr *SysRoot) Init() (*SysRoot, error) {
 	if sr.sysPath != "/" {
 		sr.Path = path.Join(sr.sysPath, fmt.Sprintf("%s.%s", sr.Name, sr.Arch))
 		if _, err := os.Stat(sr.sysPath); os.IsNotExist(err) {
-			return nil, fmt.Errorf("No system root found at %s", sr.sysPath)
+			return nil, fmt.Errorf("no system root found at %s", sr.sysPath)
 		}
 	} else { // chrooted
 		sr.Path = sr.sysPath
@@ -96,7 +96,7 @@ func (sr *SysRoot) Init() (*SysRoot, error) {
 
 	sr.confPath = path.Clean(path.Join(sr.Path, ChildSysrootConfig))
 	if _, err := os.Stat(sr.confPath); os.IsNotExist(err) {
-		return nil, fmt.Errorf("Invalid or unknown child system root. Configuration missing at %s", sr.confPath)
+		return nil, fmt.Errorf("invalid or unknown child system root. Configuration missing at %s", sr.confPath)
 	}
 	conf := nanoconf.NewConfig(sr.confPath)
 
@@ -109,7 +109,7 @@ func (sr *SysRoot) Init() (*SysRoot, error) {
 	}
 
 	if sr.Name == "" || sr.Arch == "" {
-		return nil, fmt.Errorf("Invalid configuration of a system root at %s", sr.Path)
+		return nil, fmt.Errorf("invalid configuration of a system root at %s", sr.Path)
 	}
 
 	return sr, nil
@@ -119,14 +119,14 @@ func (sr *SysRoot) Init() (*SysRoot, error) {
 func (sr *SysRoot) checkExistingSysroot(checkExists bool) error {
 	if checkExists {
 		if _, err := os.Stat(sr.Path); !os.IsNotExist(err) {
-			return fmt.Errorf("System root at %s already exists", sr.Path)
+			return fmt.Errorf("system root at %s already exists", sr.Path)
 		}
 	}
 
 	if sr.Name == "" {
-		return fmt.Errorf("Name was not set for new sysroot")
+		return fmt.Errorf("name was not set for new sysroot")
 	} else if sr.Arch == "" {
-		return fmt.Errorf("Architecture was not set for the new sysroot")
+		return fmt.Errorf("architecture was not set for the new sysroot")
 	}
 	return nil
 }
@@ -183,7 +183,7 @@ func (sr *SysRoot) Delete() error {
 			return err
 		}
 		if len(files) > 0 && sysmgr_lib.IsMounted(d) {
-			return fmt.Errorf("Directory %s seems not properly unmounted. Please check it, unmount manually and try again.", d)
+			return fmt.Errorf("directory %s seems not properly unmounted (Please )check it, unmount manually and try again)", d)
 		}
 	}
 
