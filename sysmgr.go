@@ -32,7 +32,7 @@ type SysrootManager struct {
 	wzlib_logger.WzLogger
 }
 
-var VERSION string = "2.0"
+var VERSION string = "2.1"
 
 // NewSysrootManager constructor
 func NewSysrootManager(appname string) *SysrootManager {
