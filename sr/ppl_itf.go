@@ -10,7 +10,7 @@ type SysrootProvisioner interface {
 	Activate() error
 	SetSysrootPath(pt string)
 	SetArch(a string)
-	GetArch() string
+	GetArch(arch string) string
 	SetName(n string)
 	SetSysPath(p string) // Path of the root
 	GetConfigPath() string

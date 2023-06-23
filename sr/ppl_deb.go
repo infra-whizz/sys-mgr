@@ -14,9 +14,11 @@ import (
 	wzlib_traits "github.com/infra-whizz/wzlib/traits"
 	wzlib_traits_attributes "github.com/infra-whizz/wzlib/traits/attributes"
 	wzlib_utils "github.com/infra-whizz/wzlib/utils"
+	"github.com/shirou/gopsutil/host"
 )
 
 type repodata struct {
+	options    map[string]string
 	components []string
 	url        string
 	codename   string
@@ -71,7 +73,31 @@ func (dsp *DebianSysrootProvisioner) beforePopulate() error {
 	return nil
 }
 
+/*
+Get a proper URL for the repo.
+This is done the following way:
+
+ 1. URLs are searched only in /etc/apt/sources.list (subdir "sources.list.d" is ignored)
+
+ 2. Only genuine distribution URL is extracted (i.e. which contains "main" component)
+
+ 3. If the current arch is not the same as asked arch, then the system has to be
+    setup for multiarch: https://wiki.debian.org/Multiarch/HOWTO
+    Specifically the following tag is required to match the architecture:
+
+    deb [arch=....] .....
+
+    Example:
+
+    deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy main universe multiverse restricted
+*/
 func (dsp *DebianSysrootProvisioner) getRepoData() (*repodata, error) {
+	currArch, err := host.KernelArch()
+	if err != nil {
+		return nil, err
+	}
+	currArch = dsp.GetArch(currArch)
+
 	sourcesList := "/etc/apt/sources.list"
 	if !wzlib_utils.FileExists(sourcesList) {
 		return nil, fmt.Errorf("file %s is not accessible", sourcesList)
@@ -82,37 +108,66 @@ func (dsp *DebianSysrootProvisioner) getRepoData() (*repodata, error) {
 		return nil, err
 	}
 
-	r := &repodata{
-		codename: dsp.sysinfo.Get("os.codename").(string),
-	}
-
 	components := map[string]interface{}{}
+	var r *repodata
 
 	for _, line := range strings.Split(string(data), "\n") {
+		r = &repodata{
+			codename: dsp.sysinfo.Get("os.codename").(string),
+			options:  map[string]string{},
+		}
 		line = strings.TrimSpace(line)
+		// Not a binary repo
 		if !strings.HasPrefix(line, "deb ") {
 			continue
 		}
 
+		// Incomplete format
 		tkn := strings.Fields(line)
 		if len(tkn) < 3 {
 			continue
 		}
 
-		if tkn[2] != r.codename && tkn[2] == "sid" {
+		// Options?
+		offset := 0
+		if tkn[1][0] == '[' && tkn[1][len(tkn[1])-1] == ']' {
+			for _, kvd := range strings.Fields(tkn[1][1 : len(tkn[1])-1]) {
+				kv := strings.Split(kvd, "=")
+				if len(kv) == 2 {
+					r.options[kv[0]] = kv[1]
+				}
+			}
+			offset++
+		}
+
+		optArch := r.options["arch"]
+		if currArch == dsp.GetArch("") {
+			optArch = ""
+		}
+
+		if tkn[2+offset] != r.codename && tkn[2] == "sid" {
 			r.codename = "sid"
 		}
-		if tkn[2] != r.codename {
+		if tkn[2+offset] != r.codename {
 			continue
 		}
 
-		if r.url == "" && strings.Contains(line, "main") {
-			r.url = tkn[1]
+		if (r.url == "" && strings.Contains(line, "main")) &&
+			((currArch == dsp.GetArch("")) || (currArch != dsp.GetArch("") && optArch == dsp.GetArch(""))) {
+			r.url = tkn[1+offset]
 		}
 
-		for _, cmpt := range tkn[3:] {
+		for _, cmpt := range tkn[3+offset:] {
 			components[cmpt] = nil
 		}
+
+		if r.url != "" {
+			break
+		}
+	}
+
+	if r == nil || r.url == "" {
+		return nil, fmt.Errorf("no repo URL found that matches target architecture (%s)", dsp.GetArch(""))
 	}
 
 	// Turn sets to arrays
@@ -124,12 +179,19 @@ func (dsp *DebianSysrootProvisioner) getRepoData() (*repodata, error) {
 	return r, nil
 }
 
-func (dsp *DebianSysrootProvisioner) GetArch() string {
+func (dsp *DebianSysrootProvisioner) GetArch(arch string) string {
 	archfix := map[string]string{
-		"x86_64": "amd64",
-		"i586":   "i386",
+		"x86_64":  "amd64",
+		"i586":    "i386",
+		"aarch64": "arm64", // Only for Debian repos. Otherwise aarch64. Yes, it is a mess!
 	}
-	arch, ex := archfix[dsp.arch]
+
+	var ex bool
+	if arch == "" {
+		arch = dsp.arch
+	}
+
+	arch, ex = archfix[arch]
 	if !ex {
 		arch = dsp.arch
 	}
@@ -147,7 +209,7 @@ func (dsp *DebianSysrootProvisioner) onPopulate() error {
 
 	dsp.GetLogger().Debugf("Populating sysroot into %s", dsp.sysrootPath)
 
-	if err = sysmgr_lib.LoggedExec("debootstrap", "--arch", dsp.GetArch(), "--no-check-gpg", "--variant=minbase",
+	if err = sysmgr_lib.LoggedExec("debootstrap", "--arch", dsp.GetArch(""), "--no-check-gpg", "--variant=minbase",
 		fmt.Sprintf("--components=%s", strings.Join(dsp.rd.components, ",")), dsp.rd.codename, dsp.sysrootPath, dsp.rd.url); err != nil {
 		return err
 	}

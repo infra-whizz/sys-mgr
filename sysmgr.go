@@ -210,6 +210,7 @@ func (srm SysrootManager) actionSetDefault(ctx *cli.Context) error {
 	if err := srm.mgr.SetDefaultSysRoot(name, arch); err != nil {
 		return err
 	}
+
 	if err := srm.binfmt.Register(arch); err != nil {
 		return err
 	}
