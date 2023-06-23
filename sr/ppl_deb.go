@@ -65,7 +65,7 @@ func (dsp *DebianSysrootProvisioner) getSysPath() string {
 
 func (dsp *DebianSysrootProvisioner) beforePopulate() error {
 	if dsp.getQemuPath() == "" {
-		return fmt.Errorf("No static QEMU found: %s", fmt.Sprintf(dsp.qemuPattern, dsp.arch))
+		return fmt.Errorf("no static QEMU found: %s", fmt.Sprintf(dsp.qemuPattern, dsp.arch))
 	}
 
 	return nil
@@ -74,7 +74,7 @@ func (dsp *DebianSysrootProvisioner) beforePopulate() error {
 func (dsp *DebianSysrootProvisioner) getRepoData() (*repodata, error) {
 	sourcesList := "/etc/apt/sources.list"
 	if !wzlib_utils.FileExists(sourcesList) {
-		return nil, fmt.Errorf("File %s is not accessible", sourcesList)
+		return nil, fmt.Errorf("file %s is not accessible", sourcesList)
 	}
 
 	data, err := ioutil.ReadFile(sourcesList)

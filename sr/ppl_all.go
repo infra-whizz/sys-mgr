@@ -36,14 +36,14 @@ func (bsp *BaseSysrootProvisioner) SetSysrootPath(p string) {
 func (bsp *BaseSysrootProvisioner) CheckExisting(checkExists bool) error {
 	if checkExists {
 		if _, err := os.Stat(bsp.sysrootPath); !os.IsNotExist(err) {
-			return fmt.Errorf("System root at %s already exists", bsp.sysrootPath)
+			return fmt.Errorf("system root at %s already exists", bsp.sysrootPath)
 		}
 	}
 
 	if bsp.name == "" {
-		return fmt.Errorf("Name was not set for new sysroot")
+		return fmt.Errorf("name was not set for new sysroot")
 	} else if bsp.arch == "" {
-		return fmt.Errorf("Architecture was not set for the new sysroot")
+		return fmt.Errorf("architecture was not set for the new sysroot")
 	}
 	return nil
 }

@@ -41,7 +41,7 @@ func (srm *SysrootManager) SetSupportedArchitectures(architectures []string) *Sy
 func (srm SysrootManager) checkArch(arch string) error {
 	arch = strings.ToLower(arch)
 	if !funk.Contains(srm.architectures, arch) {
-		return fmt.Errorf("Unsupported architecture: %s", arch)
+		return fmt.Errorf("unsupported architecture: %s", arch)
 	}
 	return nil
 }
@@ -66,11 +66,11 @@ func (srm *SysrootManager) CreateSysRoot(name string, arch string) (*SysRoot, er
 func (srm SysrootManager) CheckWithinSysroot(sysroot *SysRoot) error {
 	here, err := os.Getwd()
 	if err != nil {
-		return fmt.Errorf("Unable to obtain current working directory: %s", err.Error())
+		return fmt.Errorf("unable to obtain current working directory: %s", err.Error())
 	}
 
 	if strings.HasPrefix(here, sysroot.Path) {
-		return fmt.Errorf("This operation is not permitted while still inside the '%s' directory", sysroot.Path)
+		return fmt.Errorf("this operation is not permitted while still inside the '%s' directory", sysroot.Path)
 	}
 
 	return nil
@@ -123,7 +123,7 @@ func (srm *SysrootManager) SetDefaultSysRoot(name string, arch string) error {
 			}
 		}
 	} else {
-		return fmt.Errorf("Sysroot you want to make default was not found")
+		return fmt.Errorf("sysroot you want to make default was not found")
 	}
 
 	return nil
@@ -133,14 +133,14 @@ func (srm *SysrootManager) SetDefaultSysRoot(name string, arch string) error {
 func (srm *SysrootManager) GetSysRoots() ([]*SysRoot, error) {
 	data, err := ioutil.ReadDir(srm.sysroots)
 	if err != nil {
-		return nil, fmt.Errorf("Unable to read directory '%s': %s", srm.sysroots, err.Error())
+		return nil, fmt.Errorf("unable to read directory '%s': %s", srm.sysroots, err.Error())
 	}
 
 	roots := []*SysRoot{}
 	for _, fn := range data {
 		na := strings.Split(fn.Name(), ".")
 		if len(na) != 2 {
-			return nil, fmt.Errorf("Unknown sysroot found at %s", path.Join(srm.sysroots, fn.Name()))
+			return nil, fmt.Errorf("unknown sysroot found at %s", path.Join(srm.sysroots, fn.Name()))
 		}
 
 		r, err := NewSysRoot(srm.sysroots).SetName(na[0]).SetArch(na[1]).Init()
@@ -158,7 +158,7 @@ func (srm *SysrootManager) GetDefaultSysroot() (*SysRoot, error) {
 	isChrooted, err := srm.IsChrooted()
 
 	if err != nil {
-		return nil, fmt.Errorf("Unable to determine the chroot environment: %s", err.Error())
+		return nil, fmt.Errorf("unable to determine the chroot environment: %s", err.Error())
 	}
 
 	if !isChrooted {
@@ -176,7 +176,7 @@ func (srm *SysrootManager) GetDefaultSysroot() (*SysRoot, error) {
 		return NewSysRoot("/").Init()
 	}
 
-	return nil, fmt.Errorf("No default system root has been found. Please setup one.")
+	return nil, fmt.Errorf("no default system root has been found. Please setup one")
 }
 
 // fileExists or not. This needs to be moved to utils, but importing them causes cycle.
@@ -197,11 +197,11 @@ func (srm *SysrootManager) fileExists(filepath string) (bool, error) {
 func (srm *SysrootManager) IsChrooted() (bool, error) {
 	hasHostSysroot, err := srm.fileExists(HostSysrootConfig)
 	if err != nil {
-		return false, fmt.Errorf("Unable to determine weather host sysroot config exists or not: %s", err.Error())
+		return false, fmt.Errorf("unable to determine weather host sysroot config exists or not: %s", err.Error())
 	}
 	hasChildSysroot, err := srm.fileExists(ChildSysrootConfig)
 	if err != nil {
-		return false, fmt.Errorf("Unable to determine weather child sysroot config exists or not: %s", err.Error())
+		return false, fmt.Errorf("unable to determine weather child sysroot config exists or not: %s", err.Error())
 	}
 
 	return hasChildSysroot && !hasHostSysroot, nil
